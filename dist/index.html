@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#100d1d">
+  <title>백사자의 불과 얼음 모험</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23100d1d'/%3E%3Cpath d='M16 3l3 9 9 4-9 4-3 9-3-9-9-4 9-4z' fill='%23d9f66f'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#game">게임 화면으로 건너뛰기</a>
+  <div class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="처음 화면으로 이동">
+        <span class="brand-mark" aria-hidden="true">◇</span>
+        <span>WHITE LION <small>FIRE &amp; ICE</small></span>
+      </a>
+      <div class="top-actions">
+        <button id="sound-toggle" class="icon-button" type="button" aria-label="소리 끄기" aria-pressed="true">♪</button>
+        <button id="settings-open" class="icon-button" type="button" aria-label="게임 설정">⚙</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="game-title">
+        <div>
+          <p class="eyebrow">A TINY HERO · A WILD JOURNEY</p>
+          <h1 id="game-title">작은 백사자의<br><span>불과 얼음 모험</span></h1>
+        </div>
+        <p>장애물은 점프로, 악당은 공격으로 돌파하세요.<br>두 번 누르면 더 높이 뛰어요.</p>
+      </section>
+
+      <section class="arcade" aria-label="백사자 자동 달리기 게임">
+        <div class="arcade-toolbar">
+          <div class="stage-meta"><i></i><strong id="stage-name">STAGE 01 · 황금빛 사막</strong><span id="element-label">속성 선택 전</span></div>
+          <div class="toolbar-actions"><span id="run-status">READY</span><button id="pause-button" class="mini-button" type="button" disabled>일시정지</button><button id="end-button" class="mini-button danger" type="button" disabled>게임 종료</button></div>
+        </div>
+
+        <div class="viewport">
+          <canvas id="game" width="960" height="480" tabindex="0" aria-label="자동 달리기 게임. 스페이스 또는 위 화살표를 두 번 눌러 2단 점프하고, X 키로 공격합니다."></canvas>
+
+          <div class="hud" aria-label="게임 정보">
+            <div class="health-panel"><span>LIFE</span><strong id="health" aria-label="체력 5 / 5">♥ ♥ ♥ ♥ ♥</strong></div>
+            <div class="score-panel"><span>SCORE</span><strong id="score">000000</strong></div>
+            <div class="distance-panel"><span id="distance">0 m</span><b>/</b><span id="length">800 m</span></div>
+          </div>
+
+          <div id="boss-hud" class="boss-hud" hidden><span>GIANT BEAR</span><div><i id="boss-hp-fill"></i></div><b id="boss-hp-text">20 / 20</b></div>
+
+          <div id="ready-overlay" class="overlay">
+            <div class="panel start-panel">
+              <p class="panel-kicker">CHOOSE YOUR POWER</p>
+              <h2>어떤 힘으로 달릴까요?</h2>
+              <p>두 속성의 힘과 속도는 같고, 공격 연출과 소리만 달라요.</p>
+              <div class="element-grid" role="group" aria-label="공격 속성 선택">
+                <button class="element-card fire selected" type="button" data-element="fire" aria-pressed="true">
+                  <img src="assets/element-fire-icon-2026-09-10-v01.png" alt="">
+                  <span><strong>불꽃의 힘</strong><small>타오르는 공격</small></span><b>선택</b>
+                </button>
+                <button class="element-card ice" type="button" data-element="ice" aria-pressed="false">
+                  <img src="assets/element-ice-icon-2026-09-10-v01.png" alt="">
+                  <span><strong>서리의 힘</strong><small>얼어붙는 공격</small></span><b>선택</b>
+                </button>
+              </div>
+              <button id="start-button" class="primary-button" type="button">모험 시작 <span aria-hidden="true">→</span></button>
+            </div>
+          </div>
+
+          <div id="pause-overlay" class="overlay" hidden>
+            <div class="panel pause-panel">
+              <p class="panel-kicker">PAUSED</p>
+              <h2>잠깐 쉬어갈까요?</h2>
+              <button id="continue-button" class="primary-button" type="button">계속하기</button>
+              <button id="restart-button" class="secondary-button" type="button">처음부터 다시 하기</button>
+              <small>처음부터 다시 하면 불·얼음 선택 화면으로 돌아갑니다.</small>
+            </div>
+          </div>
+
+          <div id="result-overlay" class="overlay" hidden>
+            <div class="panel result-panel">
+              <p id="result-kicker" class="panel-kicker">STAGE CLEAR</p>
+              <span class="result-glyph" aria-hidden="true">✦</span>
+              <h2 id="result-title">스테이지 클리어!</h2>
+              <p id="result-copy">다음 모험이 기다리고 있어요.</p>
+              <strong id="result-score">SCORE 000000</strong>
+              <button id="result-action" class="primary-button" type="button">다음 스테이지</button>
+              <button id="result-exit" class="secondary-button" type="button">처음 화면으로</button>
+            </div>
+          </div>
+
+          <div id="toast" class="toast" hidden>체크포인트에서 다시 출발합니다</div>
+          <div class="progress-line"><i id="progress-fill"></i><b id="checkpoint-marker"></b></div>
+        </div>
+
+        <div class="controls-bar">
+          <div class="control-block jump-help"><span class="control-icon">↑</span><div><strong>점프 · 2단 점프</strong><small><kbd>SPACE</kbd> 또는 <kbd>↑</kbd> · 공중에서 한 번 더</small></div></div>
+          <span class="autorun">→ 자동 달리기</span>
+          <div class="control-block attack-help"><span class="control-icon">✦</span><div><strong>불꽃·서리 공격</strong><small><kbd>X</kbd> · 하이에나와 유령을 공격</small></div></div>
+        </div>
+
+        <div class="touch-controls" aria-label="모바일 게임 조작">
+          <button id="touch-jump" class="touch-jump" type="button"><span>↑</span> 점프</button>
+          <button id="touch-attack" class="touch-attack" type="button"><span>✦</span> 공격</button>
+        </div>
+      </section>
+
+      <section class="route" aria-labelledby="route-title">
+        <div class="route-heading"><p class="eyebrow">THE THREE STAGES</p><h2 id="route-title">끝까지 달려 숲을 되찾으세요.</h2></div>
+        <div class="stage-cards">
+          <article class="stage-card current" data-stage-card="0"><span>01</span><div><small>DESERT</small><h3>황금빛 사막</h3><p>빠른 시작, 기본 장애물과 하이에나</p></div><b>●○○</b></article>
+          <article class="stage-card" data-stage-card="1"><span>02</span><div><small>TEMPLE</small><h3>붉은 신전</h3><p>떠다니는 유령과 촘촘한 함정</p></div><b>●●○</b></article>
+          <article class="stage-card" data-stage-card="2"><span>03</span><div><small>JUNGLE</small><h3>태양의 밀림</h3><p>최고 속도와 거대 곰 보스</p></div><b>●●●</b></article>
+        </div>
+      </section>
+    </main>
+
+    <footer><span>WHITE LION ARCADE · 2026</span><span>ORIGINAL RETRO ADVENTURE</span></footer>
+  </div>
+
+  <dialog id="settings-dialog" aria-labelledby="settings-title">
+    <div class="dialog-head"><p class="panel-kicker">SETTINGS</p><button id="settings-close" class="icon-button" type="button" aria-label="설정 닫기">×</button></div>
+    <h2 id="settings-title">게임 설정</h2>
+    <label for="volume">소리 크기 <output id="volume-value">55%</output></label>
+    <input id="volume" type="range" min="0" max="100" value="55">
+    <label class="check-setting"><span>화면 효과 줄이기<small>반짝임과 흔들림을 줄입니다.</small></span><input id="reduced-motion" type="checkbox"></label>
+    <button id="settings-done" class="primary-button" type="button">설정 완료</button>
+  </dialog>
+
+  <div id="announcer" class="sr-only" role="status" aria-live="polite"></div>
+  <script src="js/core.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/art.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
