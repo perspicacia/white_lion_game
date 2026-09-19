@@ -46,6 +46,19 @@ function makeRenderer() {
   return { renderer: new Renderer(canvas, engine), ctx };
 }
 
+test('boss draws no text banners during warning, recovery or rage', () => {
+  for (const state of [{ attackTimer: 0.5 }, { recovery: 0.9 }, { enraged: true }]) {
+    const { renderer, ctx } = makeRenderer();
+    renderer.bear = { naturalWidth: 1000 };
+    renderer.engine.mode = 'boss-fight';
+    renderer.engine.boss = { active: true, opacity: 1, x: 704, attackTimer: 2, ...state };
+    ctx.fillText = () => assert.fail('Boss text must stay removed');
+    renderer.drawBoss();
+    assert.equal(ctx.operations.filter(op => op[0] === 'drawImage').length, 1);
+    assert.equal(ctx.operations.some(op => op[0] === 'fillRect'), false);
+  }
+});
+
 test('boss claw and ground wave have distinct animated silhouettes', () => {
   const render = (groundWave, life) => {
     const { renderer, ctx } = makeRenderer();
