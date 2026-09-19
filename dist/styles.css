@@ -45,9 +45,9 @@ button:disabled { cursor: not-allowed; opacity: 0.42; }
 .icon-button, .mini-button { min-width: 44px; min-height: 44px; border: 1px solid var(--line); background: var(--panel); transition: background 180ms ease, border-color 180ms ease, transform 180ms ease; }
 .icon-button:hover, .mini-button:hover { border-color: rgba(255,255,255,.38); background: var(--panel-2); transform: translateY(-1px); }
 
-.hero { display: grid; grid-template-columns: 1.25fr .75fr; align-items: end; gap: 40px; padding: 44px 0 28px; }
+.hero { display: grid; grid-template-columns: 1.25fr .75fr; align-items: end; gap: 28px; padding: 20px 0 16px; }
 .eyebrow, .panel-kicker { margin: 0 0 12px; color: var(--lime); font-size: 11px; font-weight: 900; letter-spacing: .2em; }
-.hero h1 { margin: 0; max-width: 820px; font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif; font-size: clamp(42px, 7vw, 84px); line-height: .94; letter-spacing: .02em; text-transform: uppercase; }
+.hero h1 { margin: 0; max-width: none; white-space: nowrap; font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif; font-size: clamp(28px, 3.2vw, 42px); line-height: 1.05; letter-spacing: .02em; text-transform: uppercase; }
 .hero h1 span { color: transparent; -webkit-text-stroke: 1px var(--ink); text-shadow: 4px 4px 0 rgba(255, 107, 53, .25); }
 .hero > p { margin: 0 0 6px; color: var(--muted); font-size: 14px; line-height: 1.8; }
 
@@ -150,7 +150,8 @@ dialog .primary-button { width: 100%; }
 
 @media (max-width: 760px) {
   .page-shell { width: min(100% - 20px, 1180px); }
-  .hero { grid-template-columns: 1fr; gap: 16px; padding-top: 34px; }
+  .hero { grid-template-columns: 1fr; gap: 10px; padding: 18px 0 14px; }
+  .hero h1 { white-space: normal; }
   .hero > p { display: none; }
   .stage-meta span, #run-status, .autorun { display: none; }
   .viewport { min-height: 460px; aspect-ratio: auto; }
@@ -171,7 +172,7 @@ dialog .primary-button { width: 100%; }
   .brand { font-size: 12px; }
   .brand-mark { width: 32px; height: 32px; }
   .top-actions .icon-button { min-width: 44px; min-height: 44px; }
-  .hero h1 { font-size: clamp(36px, 13vw, 58px); }
+  .hero h1 { font-size: clamp(28px, 8vw, 34px); }
   .arcade-toolbar { align-items: flex-start; }
   .stage-meta { padding-top: 7px; }
   .mini-button { padding: 0 8px; font-size: 9px; }
