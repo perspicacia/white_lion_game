@@ -19,6 +19,15 @@
   ];
 
   const ENTITY_SIZE = {
+    sandstone: { w: 54, h: 44 },
+    cactus: { w: 48, h: 62 },
+    dune: { w: 82, h: 32 },
+    altar: { w: 74, h: 42 },
+    spears: { w: 64, h: 60 },
+    pillar: { w: 50, h: 72 },
+    log: { w: 90, h: 40 },
+    thorns: { w: 76, h: 52 },
+    roots: { w: 64, h: 66 },
     rock: { w: 52, h: 48 },
     ledge: { w: 72, h: 30 },
     spikes: { w: 68, h: 26 },
@@ -35,9 +44,9 @@
   }
 
   function stagePatterns(stageIndex) {
-    if (stageIndex === 0) return ['rock', 'hyena', 'ledge', 'rock', 'hyena', 'spikes'];
-    if (stageIndex === 1) return ['ledge', 'ghost', 'rock', 'hyena', 'spikes', 'ghost', 'rock'];
-    return ['hyena', 'spikes', 'ghost', 'rock', 'ledge', 'ghost', 'hyena', 'spikes'];
+    if (stageIndex === 0) return ['sandstone', 'hyena', 'dune', 'cactus', 'hyena', 'sandstone'];
+    if (stageIndex === 1) return ['altar', 'ghost', 'pillar', 'hyena', 'spears', 'ghost', 'altar'];
+    return ['hyena', 'thorns', 'ghost', 'log', 'roots', 'ghost', 'hyena', 'thorns'];
   }
 
   function isEnemy(type) {

@@ -216,7 +216,84 @@
       const { ctx, engine } = this;
       const rect = engine.entityRect(entity);
       if (rect.x < -190 || rect.x > 1050) return;
-      if (entity.type === 'rock') {
+      const { x, y, w, h } = rect;
+      const block = (color, dx, dy, width, height) => {
+        ctx.fillStyle = color;
+        ctx.fillRect(x + dx, y + dy, width, height);
+      };
+      if (entity.type === 'sandstone') {
+        block('#743b26', 0, 12, w, h - 12);
+        block('#bd6638', 6, 5, w - 12, h - 5);
+        block('#efad64', 13, 0, w - 25, 10);
+        block('#ffcf85', 9, 15, 27, 5);
+        block('#87452c', 24, 27, w - 24, 5);
+      } else if (entity.type === 'cactus') {
+        block('#163e2f', 18, 0, 16, h);
+        block('#52a554', 21, 3, 9, h - 3);
+        block('#246841', 0, 15, 12, 30);
+        block('#246841', 8, 35, 16, 10);
+        block('#246841', 35, 8, 13, 25);
+        block('#246841', 28, 25, 14, 9);
+        for (let i = 10; i < h; i += 14) block('#ecddab', 16, i, 5, 3);
+        block('#f4ce7c', 22, 5, 3, 45);
+      } else if (entity.type === 'dune') {
+        block('#9a502c', 0, h - 10, w, 10);
+        block('#d8873e', 8, 13, w - 16, h - 13);
+        block('#f1b656', 19, 5, w - 38, 14);
+        block('#ffe099', 30, 0, w - 60, 6);
+        block('#fff0b5', 12, 20, 36, 3);
+      } else if (entity.type === 'altar') {
+        block('#4c233a', 0, h - 12, w, 12);
+        block('#953e52', 8, 8, w - 16, h - 8);
+        block('#ffc267', 3, 0, w - 6, 8);
+        block('#e39747', 10, h - 15, w - 20, 4);
+        for (let i = 17; i < w - 12; i += 17) {
+          block('#ffd576', i, 15, 8, 12);
+          block('#673042', i + 3, 18, 3, 6);
+        }
+      } else if (entity.type === 'spears') {
+        block('#703143', 0, h - 9, w, 9);
+        for (let i = 4; i < w; i += 20) {
+          block('#b67b48', i + 4, 17, 5, h - 23);
+          block('#d8eef2', i + 2, 7, 9, 13);
+          block('#fff9d1', i + 5, 0, 3, 10);
+          block('#658797', i + 7, 11, 4, 11);
+        }
+      } else if (entity.type === 'pillar') {
+        block('#51273d', 2, h - 9, w - 4, 9);
+        block('#b46b72', 9, 9, w - 18, h - 18);
+        block('#edb390', 10, 10, 6, h - 22);
+        block('#f9c66d', 3, 5, w - 6, 9);
+        block('#c97c62', 12, 0, 13, 6);
+        block('#71314b', 26, 26, 8, 5);
+        block('#71314b', 21, 30, 7, 16);
+      } else if (entity.type === 'log') {
+        block('#382621', 0, 6, w, h - 12);
+        block('#78442c', 6, 0, w - 12, h);
+        block('#c18346', w - 24, 4, 20, h - 8);
+        block('#efc27a', w - 20, 8, 12, h - 16);
+        block('#9c5b31', w - 16, 13, 5, h - 26);
+        block('#ad7344', 9, 10, w - 38, 4);
+        block('#402c22', 15, 25, w - 43, 5);
+        block('#66994a', 12, 0, 28, 5);
+      } else if (entity.type === 'thorns') {
+        block('#273d2b', 0, h - 15, w, 15);
+        for (let i = 0; i < 4; i += 1) {
+          block('#50723c', i * 18 + 3, 14, 12, h - 14);
+          block('#9dab54', i * 18 + 5, 8, 5, h - 15);
+          block('#ffe0a1', i * 18 + 7, 0, 4, 15);
+          block('#d2c67d', i * 18, 25, 12, 4);
+        }
+      } else if (entity.type === 'roots') {
+        block('#463326', 0, h - 13, w, 13);
+        block('#81512f', 8, 25, 20, h - 25);
+        block('#ad793f', 17, 8, 15, h - 8);
+        block('#dbab67', 23, 0, 9, 17);
+        block('#805331', 36, 19, 16, h - 19);
+        block('#c0914e', 31, 15, 20, 8);
+        block('#42613b', 7, h - 9, 30, 6);
+        block('#7aaa52', 34, h - 16, 19, 5);
+      } else if (entity.type === 'rock') {
         ctx.fillStyle = '#342b38'; ctx.fillRect(rect.x, rect.y + 8, rect.w, rect.h - 8);
         ctx.fillStyle = '#7d6878'; ctx.fillRect(rect.x + 8, rect.y, 26, 12); ctx.fillRect(rect.x + 31, rect.y + 20, 13, 8);
       } else if (entity.type === 'ledge') {

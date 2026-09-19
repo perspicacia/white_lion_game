@@ -41,6 +41,19 @@ function makeRenderer() {
   return { renderer: new Renderer(canvas, engine), ctx };
 }
 
+test('all nine stage obstacles have distinct canvas drawings without enemy sprites', () => {
+  const shapes = new Set();
+  for (const type of ['sandstone', 'cactus', 'dune', 'altar', 'spears', 'pillar', 'log', 'thorns', 'roots']) {
+    const { renderer, ctx } = makeRenderer();
+    renderer.engine.entityRect = () => ({ x: 100, y: 330, w: 76, h: 66 });
+    renderer.drawEntity({ type, worldX: 100 });
+    assert.ok(ctx.operations.some(op => op[0] === 'fillRect'), type);
+    assert.equal(ctx.operations.some(op => op[0] === 'drawImage'), false, type);
+    shapes.add(JSON.stringify(ctx.operations));
+  }
+  assert.equal(shapes.size, 9);
+});
+
 test('coin collectible uses a stepped pixel outline, gold face, and dollar mark', () => {
   const { renderer, ctx } = makeRenderer();
   renderer.drawCollectible({ type: 'coin', worldX: 100 });

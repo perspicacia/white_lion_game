@@ -49,6 +49,36 @@ test('bear advances and retreats safely, pauses, resets on respawn and fades in 
   assert.equal(engine.mode, 'won');
 });
 
+test('stages have distinct obstacles that damage on contact, resist attacks and can be jumped', () => {
+  const expected = [['sandstone', 'cactus', 'dune'], ['altar', 'spears', 'pillar'], ['log', 'thorns', 'roots']];
+  expected.forEach((types, stage) => {
+    const engine = new Engine();
+    engine.start();
+    engine.stage = stage;
+    engine.setupStage();
+    const obstacles = engine.entities.filter(e => !['hyena', 'ghost'].includes(e.type));
+    assert.deepEqual([...new Set(obstacles.map(e => e.type))].sort(), [...types].sort());
+    for (const type of types) {
+      const sample = obstacles.find(e => e.type === type);
+      engine.collectibles = [];
+      engine.entities = [{ ...sample, worldX: 0, removed: false, hit: false }];
+      engine.world = 0;
+      engine.playerY = GROUND;
+      engine.hp = 5;
+      engine.invulnerable = 0;
+      engine.projectiles = [{ ...engine.entityRect(engine.entities[0]), life: 1 }];
+      engine.updateWorldCollisions();
+      assert.equal(engine.hp, 4, type);
+      assert.equal(engine.entities[0].removed, false, type);
+      engine.entities[0].hit = false;
+      engine.invulnerable = 0;
+      engine.playerY = GROUND - 120;
+      engine.updateWorldCollisions();
+      assert.equal(engine.hp, 4, type + ' cleared by jumping');
+    }
+  });
+});
+
 test('starts at stage 1 with five life and faster autorun', () => {
   const engine = new Engine();
   engine.start('fire');
