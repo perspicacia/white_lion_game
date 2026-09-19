@@ -105,9 +105,10 @@
 
   window.addEventListener('keydown', (event) => {
     if (event.target instanceof HTMLElement && event.target.matches('button, input')) return;
+    const gameplayKeys = ['Space', 'ArrowUp', 'KeyW', 'KeyX', 'KeyJ'];
+    const gameHasFocus = document.activeElement === document.querySelector('#game');
+    if (gameHasFocus && gameplayKeys.includes(event.code)) event.preventDefault();
     if (event.repeat) return;
-    const active = engine.mode === 'running' || engine.mode === 'boss-fight';
-    if (active && ['Space', 'ArrowUp', 'KeyW', 'KeyX', 'KeyJ'].includes(event.code)) event.preventDefault();
     if (event.code === 'Space' || event.code === 'ArrowUp' || event.code === 'KeyW') performJump();
     if (event.code === 'KeyX' || event.code === 'KeyJ') performAttack();
     if (event.code === 'KeyP') togglePause();
