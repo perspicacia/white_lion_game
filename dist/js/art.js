@@ -361,7 +361,25 @@
       const sw = this.bear.naturalWidth / 4;
       ctx.save();
       ctx.globalAlpha = engine.boss.opacity;
+      const warning = engine.mode === 'boss-fight' && engine.boss.attackTimer <= 0.8;
+      if (warning) {
+        ctx.shadowColor = '#ff493f';
+        ctx.shadowBlur = 12 + 8 * Math.sin(engine.time * 10);
+      }
       ctx.drawImage(this.bear, frame * sw + 8, 150, sw - 16, 370, engine.boss.x - 92, root.WhiteLionCore.GROUND - 249, 350, 246);
+      ctx.shadowBlur = 0;
+      if (engine.mode === 'boss-fight') {
+        const groundNext = engine.boss.enraged && engine.boss.attackCount % 2 === 1;
+        const label = warning ? (groundNext ? '충격파 예고 · 점프!' : '몸통 공격 예고!')
+          : engine.boss.recovery > 0 ? '반격 기회! 피해 ×4'
+          : engine.boss.enraged ? '분노 모드' : '공격을 피하고 반격하세요';
+        ctx.fillStyle = '#171322';
+        ctx.fillRect(engine.boss.x - 90, 100, 290, 32);
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = warning ? '#ffb2a3' : engine.boss.recovery > 0 ? '#fff19b' : '#ffffff';
+        ctx.fillText(label, engine.boss.x + 55, 122);
+      }
       ctx.restore();
     }
 

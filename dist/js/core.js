@@ -6,7 +6,7 @@
   const PLAYER_W = 68;
   const PLAYER_H = 54;
   const MAX_HP = 5;
-  const BOSS_MAX_HP = 20;
+  const BOSS_MAX_HP = 26;
   const CHECKPOINT_METERS = 200;
   const JUMP_VELOCITY = -720;
   const GRAVITY = 1800;
@@ -102,6 +102,9 @@
         movementTime: 0,
         y: GROUND,
         attackTimer: 1.8,
+        recovery: 0,
+        attackCount: 0,
+        enraged: false,
         opacity: 1,
         fadeTimer: 0
       };
@@ -313,6 +316,9 @@
       this.boss.x = 704;
       this.boss.movementTime = 0;
       this.boss.attackTimer = 1.4;
+      this.boss.recovery = 0;
+      this.boss.attackCount = 0;
+      this.boss.enraged = false;
       this.boss.opacity = 1;
       this.boss.fadeTimer = 0;
       this.boss.active = this.stage === 2 && this.world >= cfg.bossStart * 10;
@@ -404,6 +410,9 @@
       this.checkpoint = this.world;
       this.checkpointScore = this.score;
       this.boss.active = true;
+      this.boss.recovery = 0;
+      this.boss.attackCount = 0;
+      this.boss.enraged = false;
       this.boss.x = 704;
       this.boss.movementTime = 0;
       this.boss.attackTimer = 1.4;
@@ -417,13 +426,18 @@
       const advance = (1 - Math.cos(this.boss.movementTime * Math.PI * 2 / 4.8)) / 2;
       this.boss.x = 704 - 144 * advance;
       const bossRect = this.bossRect();
+      this.boss.enraged = this.boss.hp <= this.boss.maxHp / 2;
+      this.boss.recovery = Math.max(0, this.boss.recovery - dt);
       this.boss.attackTimer -= dt;
       if (this.boss.attackTimer <= 0) {
-        this.boss.attackTimer = 1.45 + (this.boss.hp % 3) * 0.18;
+        this.boss.attackTimer = this.boss.enraged ? 2.15 : 2.7;
+        this.boss.recovery = 0.95;
+        const groundWave = this.boss.enraged && this.boss.attackCount % 2 === 1;
+        this.boss.attackCount += 1;
         const w = 58;
         const h = 24;
         const x = bossRect.x + 10;
-        const y = bossRect.y + 56;
+        const y = groundWave ? GROUND - h : bossRect.y + 56;
         const player = this.playerRect();
         const fromX = x + w / 2;
         const fromY = y + h / 2;
@@ -432,14 +446,15 @@
         const dx = targetX - fromX;
         const dy = targetY - fromY;
         const distance = Math.hypot(dx, dy) || 1;
-        const speed = 430;
+        const speed = this.boss.enraged ? 490 : 430;
         this.enemyProjectiles.push({
           x,
           y,
           w,
           h,
-          vx: dx / distance * speed,
-          vy: dy / distance * speed,
+          vx: groundWave ? -speed : dx / distance * speed,
+          vy: groundWave ? 0 : dy / distance * speed,
+          groundWave,
           life: 2.2,
           hit: false
         });
@@ -448,7 +463,8 @@
       for (const projectile of this.projectiles) {
         if (projectile.life <= 0 || !overlaps(projectile, bossRect)) continue;
         projectile.life = 0;
-        this.boss.hp -= 1;
+        // Guarded hits still count, but well-timed counterattacks are stronger.
+        this.boss.hp -= this.boss.recovery > 0 ? 2 : 0.5;
         this.score += 120;
         this.burst(bossRect.x + 38, bossRect.y + 72, this.element === 'fire' ? '#ff823b' : '#8feaff', 16);
         this.emit('boss-hit', { hp: this.boss.hp, element: this.element });

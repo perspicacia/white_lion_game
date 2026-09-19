@@ -38,7 +38,7 @@ test('bear advances and retreats safely, pauses, resets on respawn and fades in 
   assert.equal(engine.boss.movementTime, 0);
   assert.equal(engine.boss.attackTimer, 1.4);
   advance(engine, 1);
-  engine.boss.hp = 1;
+  engine.boss.hp = 0.5;
   engine.projectiles.push({ ...engine.bossRect(), vx: 0, life: 1 });
   engine.update(1 / 120);
   assert.equal(engine.mode, 'boss-defeated');
@@ -289,14 +289,61 @@ test('every stage run is about thirty seconds longer than the previous course', 
   });
 });
 
-test('giant bear requires twenty successful attacks', () => {
+test('boss telegraphs, alternates rage attacks, rewards counters and resets phases', () => {
+  for (const element of ['fire', 'ice']) {
+    const engine = new Engine();
+    engine.start(element);
+    engine.stage = 2;
+    engine.setupStage();
+    engine.beginBoss();
+    engine.updateBoss(0.7);
+    assert.ok(engine.boss.attackTimer <= 0.8);
+    assert.equal(engine.enemyProjectiles.length, 0);
+    engine.projectiles = [{ ...engine.bossRect(), life: 1, vx: 0 }];
+    engine.updateBoss(0.01);
+    assert.equal(engine.boss.hp, 25.5);
+    engine.boss.attackTimer = 0;
+    engine.projectiles = [{ ...engine.bossRect(), life: 1, vx: 0 }];
+    engine.updateBoss(0.01);
+    assert.equal(engine.boss.hp, 23.5);
+    assert.equal(engine.boss.recovery, 0.95);
+    assert.equal(engine.boss.attackTimer, 2.7);
+    engine.boss.hp = 13;
+    engine.boss.attackTimer = 0;
+    engine.updateBoss(0.01);
+    assert.equal(engine.boss.enraged, true);
+    const wave = engine.enemyProjectiles.at(-1);
+    assert.equal(wave.groundWave, true);
+    assert.equal(wave.y + wave.h, GROUND);
+    assert.equal(wave.vy, 0);
+    assert.equal(wave.vx, -490);
+    assert.equal(engine.boss.attackTimer, 2.15);
+    engine.enemyProjectiles = [{ ...wave, x: PLAYER_X, hit: false }];
+    engine.playerY = GROUND - 100;
+    engine.updateProjectiles(0.001);
+    assert.equal(engine.hp, 5);
+    engine.playerY = GROUND;
+    engine.updateProjectiles(0.001);
+    assert.equal(engine.hp, 4);
+    engine.boss.attackTimer = 0;
+    engine.updateBoss(0.01);
+    assert.equal(engine.enemyProjectiles.at(-1).groundWave, false);
+    engine.respawn();
+    assert.equal(engine.boss.enraged, false);
+    assert.equal(engine.boss.recovery, 0);
+    assert.equal(engine.boss.attackCount, 0);
+    assert.equal(engine.boss.hp, 26);
+  }
+});
+
+test('giant bear has thirty percent more health', () => {
   const engine = new Engine();
   engine.start();
   engine.stage = 2;
   engine.setupStage();
-  assert.equal(BOSS_MAX_HP, 20);
-  assert.equal(engine.boss.hp, 20);
-  assert.equal(engine.boss.maxHp, 20);
+  assert.equal(BOSS_MAX_HP, 26);
+  assert.equal(engine.boss.hp, 26);
+  assert.equal(engine.boss.maxHp, 26);
 });
 
 test('giant bear fires a straight projectile toward the lion body center', () => {
@@ -341,7 +388,7 @@ test('giant bear stays far away, keeps ground position and fades without falling
   assert.equal(engine.mode, 'boss-fight');
   assert.ok(engine.boss.x - (PLAYER_X + 68) > 150);
   const groundY = engine.boss.y;
-  engine.boss.hp = 1;
+  engine.boss.hp = 0.5;
   const rect = engine.bossRect();
   engine.projectiles = [{ x: rect.x + 10, y: rect.y + 20, w: 36, h: 22, vx: 0, life: 1, element: 'fire' }];
   engine.update(1 / 120);
