@@ -10,6 +10,45 @@ function advance(engine, seconds, before = () => {}) {
   }
 }
 
+test('bear advances and retreats safely, pauses, resets on respawn and fades in place', () => {
+  const engine = new Engine();
+  engine.start();
+  engine.stage = 2;
+  engine.setupStage();
+  engine.beginBoss();
+  engine.invulnerable = 100;
+  const home = engine.boss.x;
+  advance(engine, 2.4, () => {
+    assert.ok(engine.boss.x >= 560 && engine.boss.x <= 704);
+    assert.equal(engine.boss.y, GROUND);
+  });
+  assert.ok(home - engine.boss.x > 140);
+  // The rendered bear begins 92px left of its collision rectangle.
+  assert.ok(engine.boss.x - 92 - (PLAYER_X + 68) > 240);
+  engine.pause();
+  const pausedX = engine.boss.x;
+  advance(engine, 1);
+  assert.equal(engine.boss.x, pausedX);
+  engine.resume();
+  advance(engine, 2.4);
+  assert.ok(Math.abs(engine.boss.x - home) < 0.01);
+  advance(engine, 1);
+  engine.respawn();
+  assert.equal(engine.boss.x, home);
+  assert.equal(engine.boss.movementTime, 0);
+  assert.equal(engine.boss.attackTimer, 1.4);
+  advance(engine, 1);
+  engine.boss.hp = 1;
+  engine.projectiles.push({ ...engine.bossRect(), vx: 0, life: 1 });
+  engine.update(1 / 120);
+  assert.equal(engine.mode, 'boss-defeated');
+  const defeatedX = engine.boss.x;
+  advance(engine, 2.1);
+  assert.equal(engine.boss.x, defeatedX);
+  assert.equal(engine.boss.y, GROUND);
+  assert.equal(engine.mode, 'won');
+});
+
 test('starts at stage 1 with five life and faster autorun', () => {
   const engine = new Engine();
   engine.start('fire');

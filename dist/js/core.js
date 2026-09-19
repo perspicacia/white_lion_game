@@ -90,6 +90,7 @@
         hp: BOSS_MAX_HP,
         maxHp: BOSS_MAX_HP,
         x: 704,
+        movementTime: 0,
         y: GROUND,
         attackTimer: 1.8,
         opacity: 1,
@@ -300,6 +301,9 @@
       for (const entity of this.entities) if (entity.worldX < this.world + 180) entity.removed = true;
       for (const item of this.collectibles) if (item.worldX < this.world + 80) item.collected = true;
       this.boss.hp = this.boss.maxHp;
+      this.boss.x = 704;
+      this.boss.movementTime = 0;
+      this.boss.attackTimer = 1.4;
       this.boss.opacity = 1;
       this.boss.fadeTimer = 0;
       this.boss.active = this.stage === 2 && this.world >= cfg.bossStart * 10;
@@ -391,12 +395,18 @@
       this.checkpoint = this.world;
       this.checkpointScore = this.score;
       this.boss.active = true;
+      this.boss.x = 704;
+      this.boss.movementTime = 0;
       this.boss.attackTimer = 1.4;
       this.mode = 'boss-fight';
       this.emit('boss-start');
     }
 
     updateBoss(dt) {
+      // Ease forward and back while keeping the visible bear safely away from the cub.
+      this.boss.movementTime += dt;
+      const advance = (1 - Math.cos(this.boss.movementTime * Math.PI * 2 / 4.8)) / 2;
+      this.boss.x = 704 - 144 * advance;
       const bossRect = this.bossRect();
       this.boss.attackTimer -= dt;
       if (this.boss.attackTimer <= 0) {
