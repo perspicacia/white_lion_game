@@ -151,7 +151,10 @@ test('only zero life respawns at the latest checkpoint with its score', () => {
   engine.world = 2001;
   engine.score = 350;
   engine.update(1 / 120);
-  assert.equal(engine.checkpoint, 2000);
+  assert.equal(engine.checkpoint, 0);
+  engine.world = 5001;
+  engine.update(1 / 120);
+  assert.equal(engine.checkpoint, 5000);
   assert.equal(engine.checkpointScore, 350);
   engine.score = 900;
   for (let hit = 0; hit < 5; hit += 1) {
@@ -163,7 +166,7 @@ test('only zero life respawns at the latest checkpoint with its score', () => {
   advance(engine, 1.2);
   assert.equal(engine.mode, 'running');
   assert.equal(engine.hp, 5);
-  assert.ok(engine.world >= 2000 && engine.world < 2030);
+  assert.ok(engine.world >= 5000 && engine.world < 5030);
   assert.equal(engine.score, 350);
 });
 

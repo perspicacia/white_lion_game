@@ -7,7 +7,7 @@
   const PLAYER_H = 54;
   const MAX_HP = 5;
   const BOSS_MAX_HP = 26;
-  const CHECKPOINT_METERS = 200;
+  const CHECKPOINT_METERS = 500;
   const JUMP_VELOCITY = -720;
   const GRAVITY = 1800;
   const ITEM_Y = 214;

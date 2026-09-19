@@ -344,13 +344,39 @@
       const { ctx } = this;
       const angle = Math.atan2(projectile.vy, projectile.vx);
       ctx.save();
+      if (projectile.groundWave) {
+        // Upright stone teeth travel along the floor; never rotate them upside down.
+        ctx.translate(projectile.x, projectile.y);
+        for (let i = 0; i < 4; i += 1) {
+          const x = i * 14;
+          const peak = 2 + (i % 2) * 5;
+          ctx.fillStyle = '#532b25';
+          ctx.beginPath(); ctx.moveTo(x, projectile.h); ctx.lineTo(x + 5, peak);
+          ctx.lineTo(x + 12, projectile.h); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = '#ffcb69';
+          ctx.fillRect(x + 5, peak + 4, 3, 10);
+        }
+        ctx.fillStyle = '#f18a35'; ctx.fillRect(0, projectile.h - 3, projectile.w, 3);
+        for (let i = 0; i < 3; i += 1) {
+          const drift = (projectile.life * 34 + i * 7) % 18;
+          ctx.fillStyle = '#d89b62'; ctx.fillRect(projectile.w + drift, projectile.h - 4 - i * 5, 4, 4);
+        }
+        ctx.restore();
+        return;
+      }
       ctx.translate(projectile.x + projectile.w / 2, projectile.y + projectile.h / 2);
       ctx.rotate(angle);
       ctx.translate(-projectile.w / 2, -projectile.h / 2);
-      ctx.fillStyle = 'rgba(255,183,70,.24)'; ctx.fillRect(-8, -8, projectile.w + 16, projectile.h + 16);
-      ctx.fillStyle = '#4b3327';
-      ctx.beginPath(); ctx.moveTo(0, projectile.h / 2); ctx.lineTo(17, 1); ctx.lineTo(31, projectile.h - 3); ctx.lineTo(43, 3); ctx.lineTo(projectile.w, projectile.h / 2); ctx.lineTo(43, projectile.h - 3); ctx.lineTo(26, projectile.h + 2); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#f1b84f'; ctx.fillRect(8, projectile.h / 2 - 2, projectile.w - 16, 4);
+      // Three ivory claw slashes point in the actual travel direction.
+      for (let i = 0; i < 3; i += 1) {
+        const y = 2 + i * 8;
+        ctx.fillStyle = '#a94845';
+        ctx.beginPath(); ctx.moveTo(0, y + 5); ctx.lineTo(20, y);
+        ctx.lineTo(projectile.w, y + 1); ctx.lineTo(30, y + 6); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#fff3d5'; ctx.fillRect(22, y + 1, 25, 2);
+        const trail = (projectile.life * 40 + i * 5) % 14;
+        ctx.fillStyle = '#ffae91'; ctx.fillRect(-trail - 5, y + 2, 5, 2);
+      }
       ctx.restore();
     }
 
@@ -370,7 +396,7 @@
       ctx.shadowBlur = 0;
       if (engine.mode === 'boss-fight') {
         const groundNext = engine.boss.enraged && engine.boss.attackCount % 2 === 1;
-        const label = warning ? (groundNext ? '충격파 예고 · 점프!' : '몸통 공격 예고!')
+        const label = warning ? (groundNext ? '충격파 예고 · 점프!' : '발톱 파동 예고!')
           : engine.boss.recovery > 0 ? '반격 기회! 피해 ×4'
           : engine.boss.enraged ? '분노 모드' : '공격을 피하고 반격하세요';
         ctx.fillStyle = '#171322';

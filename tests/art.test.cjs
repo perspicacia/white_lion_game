@@ -18,6 +18,11 @@ function makeContext() {
     translate(x, y) { operations.push(['translate', x, y]); },
     rotate(value) { operations.push(['rotate', value]); },
     scale(x, y) { operations.push(['scale', x, y]); },
+    beginPath() { operations.push(['beginPath']); },
+    moveTo(x, y) { operations.push(['moveTo', x, y]); },
+    lineTo(x, y) { operations.push(['lineTo', x, y]); },
+    closePath() { operations.push(['closePath']); },
+    fill() { operations.push(['fill', this.fillStyle]); },
     fillRect(x, y, width, height) { operations.push(['fillRect', this.fillStyle, x, y, width, height]); },
     drawImage(...args) { operations.push(['drawImage', ...args]); },
   };
@@ -40,6 +45,22 @@ function makeRenderer() {
   const canvas = { getContext: () => ctx };
   return { renderer: new Renderer(canvas, engine), ctx };
 }
+
+test('boss claw and ground wave have distinct animated silhouettes', () => {
+  const render = (groundWave, life) => {
+    const { renderer, ctx } = makeRenderer();
+    renderer.drawBossWave({ x: 400, y: 372, w: 58, h: 24, vx: -430, vy: 0, groundWave, life });
+    return ctx.operations;
+  };
+  const claw = render(false, 2);
+  const wave = render(true, 2);
+  assert.notDeepEqual(claw, wave);
+  assert.equal(claw.filter(op => op[0] === 'beginPath').length, 3);
+  assert.equal(wave.filter(op => op[0] === 'beginPath').length, 4);
+  assert.equal(wave.some(op => op[0] === 'rotate'), false);
+  assert.notDeepEqual(claw, render(false, 1.9));
+  assert.notDeepEqual(wave, render(true, 1.9));
+});
 
 test('all nine stage obstacles have distinct canvas drawings without enemy sprites', () => {
   const shapes = new Set();
