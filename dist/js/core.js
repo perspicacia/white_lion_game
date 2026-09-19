@@ -81,6 +81,9 @@
       this.world = 0;
       this.checkpoint = 0;
       this.checkpointScore = this.score;
+      this.combo = 0;
+      this.runStats = { bestCombo: 0, bonus: 0, pickups: 0, enemies: 0 };
+      this.checkpointStats = { ...this.runStats };
       this.playerY = GROUND;
       this.vy = 0;
       this.jumpsUsed = 0;
@@ -261,6 +264,9 @@
         length: cfg.length,
         checkpoint: Math.floor(this.checkpoint / 10),
         score: this.score,
+        combo: this.combo,
+        multiplier: this.comboMultiplier(),
+        runStats: { ...this.runStats },
         element: this.element,
         deaths: this.deaths,
         bossHp: this.boss.hp,
@@ -269,6 +275,23 @@
         reducedMotion: this.reducedMotion,
         jumpsRemaining: 2 - this.jumpsUsed
       };
+    }
+
+    comboMultiplier() {
+      return this.combo >= 10 ? 3 : this.combo >= 5 ? 2 : 1;
+    }
+
+    reward(basePoints, category) {
+      const previousMultiplier = this.comboMultiplier();
+      this.combo += 1;
+      const multiplier = this.comboMultiplier();
+      const points = basePoints * multiplier;
+      this.score += points;
+      this.runStats.bestCombo = Math.max(this.runStats.bestCombo, this.combo);
+      this.runStats.bonus += points - basePoints;
+      this.runStats[category] += 1;
+      if (multiplier > previousMultiplier) this.emit('combo-up', { multiplier });
+      return points;
     }
 
     burst(x, y, color, count = 10) {
@@ -282,6 +305,7 @@
     damage(source = 'collision') {
       if ((this.mode !== 'running' && this.mode !== 'boss-fight') || this.invulnerable > 0) return false;
       this.hp -= 1;
+      this.combo = 0;
       this.invulnerable = 1.25;
       this.burst(PLAYER_X + 34, this.playerY - 32, '#fff2b2', 12);
       this.emit('hit', { source });
@@ -300,6 +324,8 @@
       const cfg = STAGES[this.stage];
       this.world = this.checkpoint;
       this.score = this.checkpointScore;
+      this.combo = 0;
+      this.runStats = { ...this.checkpointStats };
       this.hp = MAX_HP;
       this.playerY = GROUND;
       this.vy = 0;
@@ -372,8 +398,7 @@
         if (overlaps(player, rect)) {
           item.collected = true;
           const healingFood = isHealingFood(item.type);
-          const points = healingFood ? 120 : 50;
-          this.score += points;
+          const points = this.reward(healingFood ? 120 : 50, 'pickups');
           if (healingFood) this.hp = Math.min(MAX_HP, this.hp + 1);
           const burstColor = item.type === 'steak' ? '#e85b43' : healingFood ? '#ff7f66' : '#ffd44d';
           this.burst(rect.x + 14, rect.y + 14, burstColor, 8);
@@ -390,9 +415,9 @@
             if (projectile.life <= 0 || !overlaps(projectile, rect)) continue;
             projectile.life = 0;
             entity.removed = true;
-            this.score += entity.type === 'ghost' ? 180 : 140;
+            const points = this.reward(entity.type === 'ghost' ? 180 : 140, 'enemies');
             this.burst(rect.x + rect.w / 2, rect.y + rect.h / 2, this.element === 'fire' ? '#ff7b32' : '#7de7ff', 14);
-            this.emit('enemy-defeated', { enemy: entity.type, element: this.element });
+            this.emit('enemy-defeated', { enemy: entity.type, element: this.element, points });
             break;
           }
         }
@@ -409,6 +434,8 @@
       this.world = cfg.bossStart * 10;
       this.checkpoint = this.world;
       this.checkpointScore = this.score;
+      this.checkpointStats = { ...this.runStats };
+      this.combo = 0;
       this.boss.active = true;
       this.boss.recovery = 0;
       this.boss.attackCount = 0;
@@ -526,6 +553,7 @@
         if (checkpoint > this.checkpoint && checkpoint < finish) {
           this.checkpoint = checkpoint;
           this.checkpointScore = this.score;
+          this.checkpointStats = { ...this.runStats };
           this.emit('checkpoint');
         }
 

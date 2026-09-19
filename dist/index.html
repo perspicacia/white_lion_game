@@ -37,6 +37,14 @@
           <div class="toolbar-actions"><span id="run-status">READY</span><button id="pause-button" class="mini-button" type="button" disabled>일시정지</button><button id="end-button" class="mini-button danger" type="button" disabled>게임 종료</button></div>
         </div>
 
+        <div class="combo-strip">
+          <div id="combo-hud" class="combo-hud" hidden aria-label="연속 성공 보상">
+            <span>연속 <b id="combo-count">0</b></span><strong id="combo-multiplier">점수 ×1</strong>
+            <div class="combo-track" aria-hidden="true"><i id="combo-fill"></i></div>
+            <small id="combo-next">5회 뒤 ×2</small>
+          </div>
+        </div>
+
         <div class="viewport">
           <canvas id="game" width="960" height="480" tabindex="0" aria-label="자동 달리기 게임. 스페이스 또는 위 화살표를 두 번 눌러 2단 점프하고, X 키로 공격합니다."></canvas>
 
@@ -64,6 +72,7 @@
                 </button>
               </div>
               <button id="start-button" class="primary-button" type="button">모험 시작 <span aria-hidden="true">→</span></button>
+              <p class="combo-guide">다치지 않고 아이템 획득·악당 처치!<br>5회 연속 점수 ×2 · 10회 연속 ×3</p>
             </div>
           </div>
 
@@ -79,13 +88,24 @@
 
           <div id="result-overlay" class="overlay" hidden>
             <div class="panel result-panel">
+              <div class="result-summary">
               <p id="result-kicker" class="panel-kicker">STAGE CLEAR</p>
               <span class="result-glyph" aria-hidden="true">✦</span>
               <h2 id="result-title">스테이지 클리어!</h2>
               <p id="result-copy">다음 모험이 기다리고 있어요.</p>
               <strong id="result-score">SCORE 000000</strong>
+              <p class="result-stats-label">이번 스테이지 기록</p>
+              <dl class="result-stats" aria-label="이번 스테이지 기록">
+                <div><dt>최대 연속</dt><dd id="result-combo">0회</dd></div>
+                <div><dt>연속 보너스</dt><dd id="result-bonus">+0</dd></div>
+                <div><dt>아이템 획득</dt><dd id="result-pickups">0개</dd></div>
+                <div><dt>악당 처치</dt><dd id="result-enemies">0마리</dd></div>
+              </dl>
+              </div>
+              <div class="result-actions">
               <button id="result-action" class="primary-button" type="button">다음 스테이지</button>
               <button id="result-exit" class="secondary-button" type="button">처음 화면으로</button>
+              </div>
             </div>
           </div>
 

@@ -32,6 +32,10 @@
       document.querySelector('#result-title').textContent = victory ? '밀림을 되찾았어요!' : `${snapshot.stageName} 돌파!`;
       document.querySelector('#result-copy').textContent = victory ? '거대 곰을 물리치고 세 개의 스테이지를 모두 완주했습니다.' : '체력을 회복하고 다음 스테이지로 출발하세요.';
       document.querySelector('#result-score').textContent = `SCORE ${String(snapshot.score).padStart(6, '0')}`;
+      document.querySelector('#result-combo').textContent = `${snapshot.runStats.bestCombo}회`;
+      document.querySelector('#result-bonus').textContent = `+${snapshot.runStats.bonus.toLocaleString()}`;
+      document.querySelector('#result-pickups').textContent = `${snapshot.runStats.pickups}개`;
+      document.querySelector('#result-enemies').textContent = `${snapshot.runStats.enemies}마리`;
       document.querySelector('#result-action').textContent = victory ? '한 번 더 달리기' : '다음 스테이지';
       document.querySelector('#result-action').dataset.action = victory ? 'title' : 'next';
       this.result.hidden = false;
@@ -63,6 +67,8 @@
       } else if (type === 'victory') {
         this.showResult('victory', snapshot);
         this.announce('세 개의 스테이지를 모두 완주했습니다.');
+      } else if (type === 'combo-up') {
+        this.announce(`연속 성공! 아이템과 악당 점수가 ${detail.multiplier}배가 되었습니다.`);
       } else if (type === 'checkpoint') {
         this.showToast(`체크포인트 ${snapshot.checkpoint} m 저장`);
         this.announce(`${snapshot.checkpoint} 미터 체크포인트를 저장했습니다.`);
@@ -93,6 +99,16 @@
       document.querySelector('#stage-name').textContent = `STAGE ${String(snapshot.stage + 1).padStart(2, '0')} · ${snapshot.stageName}`;
       document.querySelector('#element-label').textContent = snapshot.element === 'fire' ? '불꽃의 힘' : '서리의 힘';
       document.querySelector('#score').textContent = String(snapshot.score).padStart(6, '0');
+      const comboHud = document.querySelector('#combo-hud');
+      comboHud.hidden = snapshot.mode !== 'running';
+      comboHud.dataset.level = String(snapshot.multiplier);
+      comboHud.classList.toggle('reduce-motion', snapshot.reducedMotion);
+      document.querySelector('#combo-count').textContent = snapshot.combo;
+      document.querySelector('#combo-multiplier').textContent = `점수 ×${snapshot.multiplier}`;
+      const next = snapshot.combo < 5 ? 5 : 10;
+      const progressCount = snapshot.combo < 5 ? snapshot.combo : snapshot.combo - 5;
+      document.querySelector('#combo-fill').style.transform = `scaleX(${snapshot.combo >= 10 ? 1 : progressCount / 5})`;
+      document.querySelector('#combo-next').textContent = snapshot.combo >= 10 ? '최대 배율' : `${next - snapshot.combo}회 뒤 ×${snapshot.multiplier + 1}`;
       document.querySelector('#distance').textContent = `${snapshot.distance} m`;
       document.querySelector('#length').textContent = `${snapshot.length} m`;
       const hearts = Array.from({ length: snapshot.maxHp }, (_, index) => index < snapshot.hp ? '♥' : '♡').join(' ');

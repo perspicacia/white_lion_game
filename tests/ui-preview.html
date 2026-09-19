@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>로컬 검증용 · 연속 보상 화면</title>
+<style>
+body { margin:0; background:#100d1d; color:white; font:14px sans-serif; }
+nav { min-height:90px; padding:8px; box-sizing:border-box; }
+p { margin:0 0 8px; }
+button { min-height:36px; }
+iframe { display:block; width:100%; height:calc(100dvh - 90px); border:0; }
+</style>
+<nav><p>검증 전용 화면 · 아래 버튼은 예시 기록을 만듭니다.</p>
+<button data-case="combo">연속 10회</button>
+<button data-case="clear">클리어 기록</button>
+<button data-case="boss">보스 표시</button></nav>
+<iframe title="검증 중인 게임" src="../dist/index.html"></iframe>
+<script>
+document.querySelector('nav').addEventListener('click', event => {
+  const kind = event.target.dataset.case;
+  if (!kind) return;
+  const win = document.querySelector('iframe').contentWindow;
+  const engine = win.gameEngine;
+  engine.start('ice');
+  engine.entities = [];
+  for (let i = 0; i < 10; i++) {
+    engine.collectibles = [{ type:'coin', worldX:engine.world, y:356, w:28, h:28, collected:false }];
+    engine.updateWorldCollisions();
+  }
+  engine.collectibles = [];
+  if (kind === 'clear') {
+    engine.mode = 'stage-clear';
+    engine.emit('stage-clear');
+  } else if (kind === 'boss') {
+    engine.stage = 2;
+    engine.setupStage();
+    engine.beginBoss();
+    engine.invulnerable = 100;
+  }
+});
+</script>
+</html>

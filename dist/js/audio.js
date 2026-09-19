@@ -185,6 +185,13 @@
     play(type, detail = {}) {
       if (!this.context || this.muted) return;
       switch (type) {
+        case 'combo-up': {
+          const rootNote = detail.multiplier === 3 ? 659.25 : 523.25;
+          [1, 1.25, 1.5].forEach((ratio, index) => {
+            this.tone(rootNote * ratio, 0.14, { type: 'triangle', gain: 0.045, delay: index * 0.065 });
+          });
+          break;
+        }
         case 'jump':
           this.tone(340, 0.13, { to: 650, type: 'square', gain: 0.07 });
           break;
