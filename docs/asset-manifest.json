@@ -1,0 +1,109 @@
+{
+  "version": "2026-09-18-v02",
+  "canvas": {
+    "logicalWidth": 960,
+    "logicalHeight": 480,
+    "groundY": 382,
+    "pixelated": true
+  },
+  "assets": [
+    {
+      "id": "lion-run",
+      "sourcePath": "../../../day03/projects/white-lion-run-2026-09-10-v01/public/assets/white-lion-run-spritesheet-2026-09-10-v01.png",
+      "targetPath": "assets/white-lion-run-spritesheet-2026-09-10-v01.png",
+      "width": 1536,
+      "height": 1024,
+      "alpha": false,
+      "grid": { "columns": 3, "rows": 2, "frameWidth": 512, "frameHeight": 512, "frames": 6 },
+      "render": { "width": 144, "height": 144, "baselineOffsets": [0, 0, 14, 15, 15, 17] },
+      "cleanup": "neutral checker removal: max(rgb)-min(rgb)<=8 and red 100..228 => alpha 0",
+      "usage": "white lion run, jump and attack pose source"
+    },
+    {
+      "id": "lion-portrait",
+      "sourcePath": "../../../day03/projects/white-lion-run-2026-09-10-v01/public/assets/white-lion-cub-2026-09-10-v01.png",
+      "targetPath": "assets/white-lion-cub-2026-09-10-v01.png",
+      "width": 1536,
+      "height": 1024,
+      "alpha": true,
+      "usage": "start screen portrait only; never use as the running frame"
+    },
+    {
+      "id": "villains",
+      "sourcePath": "../../../day03/projects/white-lion-run-2026-09-10-v01/public/assets/villain-spritesheet-2026-09-10-v01.png",
+      "targetPath": "assets/villain-spritesheet-2026-09-10-v01.png",
+      "width": 1536,
+      "height": 1024,
+      "alpha": false,
+      "grid": { "columns": 4, "rows": 2, "frameWidth": 384, "frameHeight": 512, "frames": 8, "row0": "hyena", "row1": "ghost" },
+      "cleanup": "magenta key removal: red>215 and green<90 and blue>175 => alpha 0",
+      "usage": "hyena and ghost animation"
+    },
+    {
+      "id": "giant-bear",
+      "sourcePath": "../../../day03/projects/white-lion-run-2026-09-10-v01/public/assets/giant-bear-boss-spritesheet-2026-09-11-v01.png",
+      "targetPath": "assets/giant-bear-boss-spritesheet-2026-09-11-v01.png",
+      "width": 2172,
+      "height": 724,
+      "alpha": true,
+      "grid": { "columns": 4, "rows": 1, "frameWidth": 543, "frameHeight": 724, "frames": 4 },
+      "crop": { "xWithinFrame": 8, "y": 150, "width": 527, "height": 370 },
+      "render": { "width": 350, "height": 246, "footOffsetFromRenderTop": 239 },
+      "usage": "stage 3 final boss; stationary fade on defeat"
+    },
+    {
+      "id": "stage-1-desert",
+      "sourcePath": "../../../day03/projects/white-lion-run-2026-09-10-v01/public/assets/stage-1-desert-bg-2026-09-10-v01.png",
+      "targetPath": "assets/stage-1-desert-bg-2026-09-10-v01.png",
+      "width": 2048,
+      "height": 768,
+      "alpha": false,
+      "usage": "stage 1 desert background; mirrored alternate tiling"
+    },
+    {
+      "id": "stage-2-temple",
+      "sourcePath": "../../../day03/projects/white-lion-run-2026-09-10-v01/public/assets/stage-2-temple-bg-2026-09-10-v01.png",
+      "targetPath": "assets/stage-2-temple-bg-2026-09-10-v01.png",
+      "width": 1983,
+      "height": 793,
+      "alpha": false,
+      "usage": "stage 2 temple background; mirrored alternate tiling"
+    },
+    {
+      "id": "stage-3-jungle",
+      "sourcePath": "../../../day03/projects/white-lion-run-2026-09-10-v01/public/assets/stage-3-jungle-bg-2026-09-10-v01.png",
+      "targetPath": "assets/stage-3-jungle-bg-2026-09-10-v01.png",
+      "width": 2079,
+      "height": 756,
+      "alpha": false,
+      "usage": "stage 3 jungle background; mirrored alternate tiling"
+    },
+    {
+      "id": "element-fire",
+      "sourcePath": "../../../day03/projects/white-lion-run-2026-09-10-v01/public/assets/element-fire-icon-2026-09-10-v01.png",
+      "targetPath": "assets/element-fire-icon-2026-09-10-v01.png",
+      "width": 1254,
+      "height": 1254,
+      "alpha": true,
+      "usage": "fire selection card; display at 80x80 or 96x96"
+    },
+    {
+      "id": "element-ice",
+      "sourcePath": "../../../day03/projects/white-lion-run-2026-09-10-v01/public/assets/element-ice-icon-2026-09-10-v01.png",
+      "targetPath": "assets/element-ice-icon-2026-09-10-v01.png",
+      "width": 1254,
+      "height": 1254,
+      "alpha": true,
+      "usage": "ice selection card; display at 80x80 or 96x96"
+    }
+  ],
+  "excluded": [
+    {
+      "id": "giant-eagle",
+      "sourcePath": "../../../day03/projects/white-lion-run-2026-09-10-v01/public/assets/giant-eagle-boss-spritesheet-2026-09-11-v01.png",
+      "width": 2172,
+      "height": 724,
+      "reason": "final boss was changed from eagle to bear"
+    }
+  ]
+}
