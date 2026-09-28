@@ -13,7 +13,13 @@ iframe { display:block; width:100%; height:calc(100dvh - 90px); border:0; }
 <nav><p>검증 전용 화면 · 아래 버튼은 예시 기록을 만듭니다.</p>
 <button data-case="combo">연속 10회</button>
 <button data-case="clear">클리어 기록</button>
-<button data-case="boss">보스 표시</button></nav>
+<button data-case="boss">보스 표시</button>
+<button data-case="cobra-crouch">코브라 웅크림</button>
+<button data-case="cobra-rising">코브라 일어남</button>
+<button data-case="cobra">코브라 기립</button>
+<button data-case="ribbon">곡선·일자·왕코인</button>
+<button data-case="lanes">상중하 공격</button>
+<button data-case="retry">보스전 체력 소진</button></nav>
 <iframe title="검증 중인 게임" src="../dist/index.html"></iframe>
 <script>
 document.querySelector('nav').addEventListener('click', event => {
@@ -22,6 +28,54 @@ document.querySelector('nav').addEventListener('click', event => {
   const win = document.querySelector('iframe').contentWindow;
   const engine = win.gameEngine;
   engine.start('ice');
+  if (kind.startsWith('cobra')) {
+    engine.stage = 2;
+    engine.setupStage();
+    engine.collectibles = [];
+    const cobra = engine.entities.find(entity => entity.type === 'cobra');
+    engine.entities = [cobra];
+    engine.world = cobra.worldX - (kind === 'cobra-crouch' ? 564 : kind === 'cobra-rising' ? 369 : 235);
+    engine.pause();
+    win.document.querySelector('#pause-overlay').hidden = true;
+    return;
+  }
+  if (kind === 'ribbon') {
+    const arc = engine.collectibles.filter(item => item.id.startsWith('c-0-0-')).slice(0, 7);
+    const line = engine.collectibles.filter(item => item.id.startsWith('c-0-1-')).slice(0, 7);
+    const big = { ...engine.collectibles.find(item => item.type === 'bigcoin') };
+    const replaced = line[3];
+    big.worldX = replaced.worldX - 6;
+    big.y = replaced.y - 6;
+    big.collected = false;
+    engine.collectibles = [...arc, ...line.filter(item => item !== replaced), big];
+    engine.world = arc[0].worldX - 40;
+    engine.pause();
+    win.document.querySelector('#pause-overlay').hidden = true;
+    return;
+  }
+  if (kind === 'lanes' || kind === 'retry') {
+    engine.stage = 2;
+    engine.score = 2000;
+    engine.setupStage();
+    engine.beginBoss();
+    engine.invulnerable = 100;
+    for (let i = 0; i < 3; i++) {
+      engine.boss.attackTimer = 0;
+      engine.updateBoss(0.01);
+    }
+    engine.updateProjectiles(0.45);
+    if (kind === 'retry') {
+      engine.hp = 1;
+      engine.score = 3000;
+      engine.invulnerable = 0;
+      engine.damage('test');
+      for (let i = 0; i < 24; i++) engine.update(0.05);
+    }
+    engine.pause();
+    // Test-only presentation freezes the canvas without a pause menu covering it.
+    win.document.querySelector('#pause-overlay').hidden = true;
+    return;
+  }
   engine.entities = [];
   for (let i = 0; i < 10; i++) {
     engine.collectibles = [{ type:'coin', worldX:engine.world, y:356, w:28, h:28, collected:false }];

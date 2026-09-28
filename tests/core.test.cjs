@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { Engine, STAGES, GROUND, PLAYER_X, ITEM_Y, BOSS_MAX_HP } = require('../dist/js/core.js');
+const { Engine, STAGES, GROUND, PLAYER_X, ITEM_Y, BOSS_MAX_HP, BOSS_LANES, COIN_ARC_INTERVAL, isEnemy } = require('../dist/js/core.js');
 
 function advance(engine, seconds, before = () => {}) {
   const frames = Math.ceil(seconds * 120);
@@ -36,7 +36,9 @@ test('bear advances and retreats safely, pauses, resets on respawn and fades in 
   engine.respawn();
   assert.equal(engine.boss.x, home);
   assert.equal(engine.boss.movementTime, 0);
-  assert.equal(engine.boss.attackTimer, 1.4);
+  assert.equal(engine.boss.active, false);
+  assert.equal(engine.world, 0);
+  engine.beginBoss();
   advance(engine, 1);
   engine.boss.hp = 0.5;
   engine.projectiles.push({ ...engine.bossRect(), vx: 0, life: 1 });
@@ -56,7 +58,7 @@ test('stages have distinct obstacles that damage on contact, resist attacks and 
     engine.start();
     engine.stage = stage;
     engine.setupStage();
-    const obstacles = engine.entities.filter(e => !['hyena', 'ghost'].includes(e.type));
+    const obstacles = engine.entities.filter(e => !isEnemy(e.type));
     assert.deepEqual([...new Set(obstacles.map(e => e.type))].sort(), [...types].sort());
     for (const type of types) {
       const sample = obstacles.find(e => e.type === type);
@@ -77,6 +79,50 @@ test('stages have distinct obstacles that damage on contact, resist attacks and 
       assert.equal(engine.hp, 4, type + ' cleared by jumping');
     }
   });
+});
+
+test('stage 3 adds a cobra that rises near the lion and awards its own attack score', () => {
+  const enemySets = [
+    ['hyena'],
+    ['ghost', 'hyena'],
+    ['cobra', 'ghost', 'hyena']
+  ];
+  enemySets.forEach((expected, stage) => {
+    const engine = new Engine();
+    engine.start();
+    engine.stage = stage;
+    engine.setupStage();
+    assert.deepEqual([...new Set(engine.entities.filter(entity => isEnemy(entity.type)).map(entity => entity.type))].sort(), expected);
+  });
+
+  const engine = new Engine();
+  engine.start();
+  engine.stage = 2;
+  engine.setupStage();
+  const cobra = engine.entities.find(entity => entity.type === 'cobra');
+  engine.world = cobra.worldX - 564;
+  const low = engine.entityRect(cobra);
+  engine.world = cobra.worldX - 369;
+  const rising = engine.entityRect(cobra);
+  engine.world = cobra.worldX - 235;
+  const raised = engine.entityRect(cobra);
+  assert.equal(low.h, 76);
+  assert.ok(rising.h > low.h && rising.h < raised.h);
+  assert.equal(raised.h, 136);
+  assert.equal(low.y + low.h, GROUND);
+  assert.equal(rising.y + rising.h, GROUND);
+  assert.equal(raised.y + raised.h, GROUND);
+  engine.world = cobra.worldX - 68;
+  assert.equal(engine.entityRect(cobra).h, raised.h, 'cobra stays raised near the lion');
+  engine.world = cobra.worldX - 235;
+
+  engine.collectibles = [];
+  engine.entities = [cobra];
+  engine.projectiles = [{ ...raised, life: 1 }];
+  engine.updateWorldCollisions();
+  assert.equal(cobra.removed, true);
+  assert.equal(engine.score, 220);
+  assert.equal(engine.runStats.enemies, 1);
 });
 
 test('starts at stage 1 with five life and faster autorun', () => {
@@ -122,7 +168,7 @@ test('fire and ice produce identical game mechanics', () => {
       if (frame % 79 === 0) engine.attack();
       engine.update(1 / 120);
     }
-    for (const key of ['stage', 'hp', 'score', 'world', 'playerY', 'vy', 'mode', 'checkpoint']) {
+    for (const key of ['stage', 'hp', 'score', 'world', 'playerY', 'vy', 'mode']) {
       assert.equal(fire[key], ice[key], `${key} differs at frame ${frame}`);
     }
   }
@@ -143,19 +189,19 @@ test('one accepted hit removes one life without resetting distance', () => {
   assert.ok(engine.world >= before);
 });
 
-test('only zero life respawns at the latest checkpoint with its score', () => {
+test('zero life restarts the current stage and preserves only previous-stage score', () => {
   const engine = new Engine();
   engine.start();
   engine.entities = [];
   engine.collectibles = [];
-  engine.world = 2001;
+  engine.stage = 1;
   engine.score = 350;
-  engine.update(1 / 120);
-  assert.equal(engine.checkpoint, 0);
+  engine.setupStage();
+  engine.entities = [];
+  engine.collectibles = [];
   engine.world = 5001;
   engine.update(1 / 120);
-  assert.equal(engine.checkpoint, 5000);
-  assert.equal(engine.checkpointScore, 350);
+  assert.equal('checkpoint' in engine.snapshot(), false);
   engine.score = 900;
   for (let hit = 0; hit < 5; hit += 1) {
     engine.invulnerable = 0;
@@ -166,7 +212,8 @@ test('only zero life respawns at the latest checkpoint with its score', () => {
   advance(engine, 1.2);
   assert.equal(engine.mode, 'running');
   assert.equal(engine.hp, 5);
-  assert.ok(engine.world >= 5000 && engine.world < 5030);
+  assert.equal(engine.stage, 1);
+  assert.ok(engine.world >= 0 && engine.world < 40);
   assert.equal(engine.score, 350);
 });
 
@@ -204,32 +251,107 @@ test('ground running cannot collect apex items, but a timed jump can', () => {
   assert.equal(jumping.score, 50);
 });
 
-test('coin intervals generate three-coin arcs while healing foods stay single and alternate', () => {
+test('long ribbons alternate arc and straight patterns, stay airborne and alternate healing food', () => {
   for (let stage = 0; stage < 3; stage += 1) {
     const engine = new Engine();
     engine.stage = stage;
     engine.setupStage();
 
     const coinGroups = new Map();
-    for (const item of engine.collectibles.filter(({ type }) => type === 'coin')) {
+    for (const item of engine.collectibles) {
       const groupId = item.id.split('-').slice(0, 3).join('-');
       const group = coinGroups.get(groupId) || [];
       group.push(item);
       coinGroups.set(groupId, group);
     }
 
-    assert.ok(coinGroups.size > 0);
-    for (const group of coinGroups.values()) {
-      assert.equal(group.length, 3);
-      assert.deepEqual(group.map(({ y }) => y).sort((a, b) => a - b), [ITEM_Y, ITEM_Y + 10, ITEM_Y + 10]);
-      assert.equal(Math.max(...group.map(({ worldX }) => worldX)) - Math.min(...group.map(({ worldX }) => worldX)), 68);
+    assert.ok(coinGroups.size > 10);
+    const completeGroups = [...coinGroups.values()].slice(0, -1);
+    for (const group of completeGroups) {
+      assert.ok([14, 21].includes(group.length));
+      assert.ok(group.filter(item => item.type === 'coin').length >= 13);
+      assert.ok(group.every(item => item.y + item.h / 2 >= ITEM_Y + 14 && item.y + item.h + 5 < GROUND - 54));
+      assert.ok(group.at(-1).worldX - group[0].worldX > 400);
     }
+    const patterns = completeGroups.map(group => group[0].pattern);
+    assert.deepEqual(patterns.slice(0, 6), ['arc', 'line', 'arc', 'line', 'arc', 'line']);
+    for (const group of completeGroups.filter(group => group[0].pattern === 'line')) {
+      assert.equal(new Set(group.map(item => item.y + item.h / 2)).size, 1);
+    }
+    for (const group of completeGroups.filter(group => group[0].pattern === 'arc')) {
+      assert.ok(new Set(group.map(item => item.y + item.h / 2)).size > 3);
+    }
+    assert.ok(engine.collectibles.filter(item => item.type === 'coin').length > 300);
+    assert.equal(new Set(engine.collectibles.map(item => item.id)).size, engine.collectibles.length);
+    assert.ok(engine.collectibles.every(item => item.worldX + 28 < (stage === 2 ? STAGES[stage].bossStart - 35 : STAGES[stage].length - 25) * 10));
     const foods = engine.collectibles.filter(({ type }) => type === 'food' || type === 'steak');
     assert.ok(foods.some(({ type }) => type === 'food'));
     assert.ok(foods.some(({ type }) => type === 'steak'));
-    assert.ok(foods.every(({ id }) => id.split('-').length === 3));
+    assert.ok(foods.every(item => item.y + item.h / 2 >= ITEM_Y + 14 && item.y + item.h / 2 <= ITEM_Y + 48));
     for (let index = 1; index < foods.length; index += 1) assert.notEqual(foods[index].type, foods[index - 1].type);
   }
+});
+
+test('rare golden big coins are larger and worth five regular coins', () => {
+  const engine = new Engine();
+  engine.start();
+  const groups = new Map();
+  for (const item of engine.collectibles) {
+    const group = Number(item.id.split('-')[2]);
+    if (!groups.has(group)) groups.set(group, []);
+    groups.get(group).push(item);
+  }
+  const bigCoins = engine.collectibles.filter(item => item.type === 'bigcoin');
+  assert.ok(bigCoins.length > 0);
+  assert.ok(bigCoins.length < engine.collectibles.filter(item => item.type === 'coin').length / 50);
+  assert.ok(bigCoins.every(item => item.w === 40 && item.h === 40));
+  for (const [group, items] of groups) {
+    assert.equal(items.filter(item => item.type === 'bigcoin').length, group % 6 === 5 ? 1 : 0);
+  }
+  engine.entities = [];
+  const target = bigCoins[0];
+  engine.world = target.worldX;
+  engine.playerY = target.y + target.h + 45;
+  engine.collectibles = [target];
+  engine.updateWorldCollisions();
+  assert.equal(target.collected, true);
+  assert.equal(engine.score, 250);
+});
+
+test('consecutive timed jumps can collect an entire ribbon in every stage', () => {
+  for (let stage = 0; stage < 3; stage++) {
+    const engine = new Engine();
+    engine.start();
+    engine.stage = stage;
+    engine.setupStage();
+    engine.entities = [];
+    engine.collectibles = engine.collectibles.filter(item => item.id.startsWith(`c-${stage}-0-`));
+    engine.world = 480;
+    engine.jump();
+    let secondJump = false;
+    advance(engine, 1.8, () => {
+      if (!secondJump && engine.time >= COIN_ARC_INTERVAL) {
+        engine.jump();
+        secondJump = true;
+      }
+    });
+    assert.equal(engine.collectibles.filter(item => item.collected).length, 14, `stage ${stage + 1}`);
+  }
+});
+
+test('a well-timed double jump can collect a full straight ribbon', () => {
+  const engine = new Engine();
+  engine.start();
+  engine.entities = [];
+  const line = engine.collectibles.filter(item => item.id.startsWith('c-0-1-'));
+  engine.collectibles = line;
+  engine.world = line[0].worldX - STAGES[0].speed * 0.1;
+  engine.jump();
+  advance(engine, 1.8, (_engine, frame) => {
+    if (frame === Math.round(0.9 * 120)) engine.jump();
+  });
+  assert.equal(line.length, 14);
+  assert.equal(line.filter(item => item.collected).length, 14);
 });
 
 test('chicken and steak grant the same score and healing', () => {
@@ -309,18 +431,19 @@ test('boss telegraphs, alternates rage attacks, rewards counters and resets phas
     engine.projectiles = [{ ...engine.bossRect(), life: 1, vx: 0 }];
     engine.updateBoss(0.01);
     assert.equal(engine.boss.hp, 23.5);
-    assert.equal(engine.boss.recovery, 0.95);
-    assert.equal(engine.boss.attackTimer, 2.7);
+    assert.equal(engine.boss.recovery, 0.85);
+    assert.equal(engine.boss.attackTimer, 2.35);
     engine.boss.hp = 13;
+    engine.boss.attackCount = 0;
     engine.boss.attackTimer = 0;
     engine.updateBoss(0.01);
     assert.equal(engine.boss.enraged, true);
-    const wave = engine.enemyProjectiles.at(-1);
+    const wave = engine.enemyProjectiles.find(shot => shot.groundWave);
     assert.equal(wave.groundWave, true);
     assert.equal(wave.y + wave.h, GROUND);
     assert.equal(wave.vy, 0);
     assert.equal(wave.vx, -490);
-    assert.equal(engine.boss.attackTimer, 2.15);
+    assert.equal(engine.boss.attackTimer, 1.9);
     engine.enemyProjectiles = [{ ...wave, x: PLAYER_X, hit: false }];
     engine.playerY = GROUND - 100;
     engine.updateProjectiles(0.001);
@@ -349,7 +472,7 @@ test('giant bear has thirty percent more health', () => {
   assert.equal(engine.boss.maxHp, 26);
 });
 
-test('giant bear fires a straight projectile toward the lion body center', () => {
+test('bear fires at all three distinct heights without steering shots back toward the ground', () => {
   const engine = new Engine();
   engine.start();
   engine.stage = 2;
@@ -357,28 +480,61 @@ test('giant bear fires a straight projectile toward the lion body center', () =>
   engine.mode = 'boss-fight';
   engine.boss.active = true;
   engine.boss.attackTimer = 0;
-  const player = engine.playerRect();
-  engine.updateBoss(1 / 120);
-  assert.equal(engine.enemyProjectiles.length, 1);
-  const shot = engine.enemyProjectiles[0];
-  const startX = shot.x;
-  const startY = shot.y;
-  const fromX = shot.x + shot.w / 2;
-  const fromY = shot.y + shot.h / 2;
-  const targetX = player.x + player.w / 2;
-  const targetY = player.y + player.h / 2;
-  assert.ok(shot.y < GROUND - 80);
-  assert.ok(Math.abs(Math.hypot(shot.vx, shot.vy) - 430) < 0.001);
-  assert.ok(Math.abs((targetX - fromX) * shot.vy - (targetY - fromY) * shot.vx) < 0.001);
-  const originalVelocity = [shot.vx, shot.vy];
-  engine.playerY = GROUND - 140;
-  engine.updateProjectiles(0.1);
-  assert.ok(Math.abs(shot.x - (startX + shot.vx * 0.1)) < 0.001);
-  assert.ok(Math.abs(shot.y - (startY + shot.vy * 0.1)) < 0.001);
-  assert.deepEqual([shot.vx, shot.vy], originalVelocity);
-  engine.playerY = GROUND;
-  for (let frame = 0; frame < 240 && engine.hp === 5; frame += 1) engine.updateProjectiles(1 / 120);
-  assert.equal(engine.hp, 4);
+  const seen = new Set();
+  for (let volley = 0; volley < 4; volley++) {
+    const preview = [...engine.upcomingBossLanes()];
+    engine.enemyProjectiles = [];
+    engine.boss.attackTimer = 0;
+    engine.updateBoss(1 / 120);
+    assert.deepEqual(engine.enemyProjectiles.map(shot => shot.lane), preview);
+    assert.ok(preview.length < 3, 'never block every lane');
+    for (const shot of engine.enemyProjectiles) {
+      seen.add(shot.lane);
+      assert.equal(shot.y + shot.h / 2, BOSS_LANES[shot.lane]);
+      assert.equal(shot.vx, -430);
+      assert.equal(shot.vy, 0);
+      const y = shot.y;
+      engine.playerY = GROUND;
+      engine.updateProjectiles(0.05);
+      assert.equal(shot.y, y);
+    }
+  }
+  assert.equal(seen.size, 3);
+  engine.boss.hp = 13;
+  for (let volley = 0; volley < 3; volley++) {
+    engine.enemyProjectiles = [];
+    engine.boss.attackTimer = 0;
+    engine.updateBoss(0.01);
+    assert.equal(engine.enemyProjectiles.length, 2);
+    assert.ok(engine.enemyProjectiles.every(shot => shot.vx === -490));
+  }
+});
+
+test('each boss lane damages its matching height; boss defeat on death is not a checkpoint', () => {
+  for (const [lane, center] of Object.entries(BOSS_LANES)) {
+    const engine = new Engine();
+    engine.start();
+    engine.stage = 2;
+    engine.score = 900;
+    engine.setupStage();
+    engine.beginBoss();
+    engine.enemyProjectiles = [{ x: PLAYER_X, y: center - 12, w: 58, h: 24, vx: 0, vy: 0, life: 2, hit: false, lane }];
+    engine.playerY = lane === 'low' ? GROUND : center + 29;
+    engine.updateProjectiles(0.01);
+    assert.equal(engine.hp, 4, lane);
+    engine.score = 1800;
+    engine.hp = 1;
+    engine.invulnerable = 0;
+    engine.damage('test');
+    advance(engine, 1.2);
+    assert.equal(engine.stage, 2);
+    assert.equal(engine.mode, 'running');
+    assert.ok(engine.world < 50);
+    assert.equal(engine.score, 900);
+    assert.equal(engine.boss.active, false);
+    assert.equal(engine.boss.hp, BOSS_MAX_HP);
+    assert.equal(engine.enemyProjectiles.length, 0);
+  }
 });
 
 test('giant bear stays far away, keeps ground position and fades without falling', () => {

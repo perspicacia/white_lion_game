@@ -58,7 +58,7 @@ test('enemy hits count once, pause preserves combo and restart clears it', () =>
   assert.equal(engine.runStats.enemies, 0);
 });
 
-test('checkpoint rewinds stats with score; next stage and boss reset combo', () => {
+test('stage retry clears failed-run stats; next stage and boss reset combo', () => {
   const engine = new Engine();
   engine.start();
   engine.entities = [];
@@ -66,15 +66,11 @@ test('checkpoint rewinds stats with score; next stage and boss reset combo', () 
   engine.world = 5001;
   engine.collectibles = [];
   engine.update(0.01);
-  const saved = { ...engine.runStats };
-  const savedScore = engine.score;
   coin(engine);
   engine.respawn();
   assert.equal(engine.combo, 0);
-  assert.equal(engine.score, savedScore);
-  assert.deepEqual(engine.runStats, saved);
-  engine.runStats.bonus += 1;
-  assert.equal(engine.checkpointStats.bonus, saved.bonus, 'checkpoint is not aliased');
+  assert.equal(engine.score, 0);
+  assert.deepEqual(engine.runStats, { bestCombo: 0, bonus: 0, pickups: 0, enemies: 0 });
   engine.mode = 'stage-clear';
   engine.nextStage();
   assert.equal(engine.combo, 0);
@@ -86,5 +82,5 @@ test('checkpoint rewinds stats with score; next stage and boss reset combo', () 
   engine.beginBoss();
   assert.equal(engine.combo, 0);
   assert.equal(engine.runStats.bestCombo, 5);
-  assert.equal(engine.checkpointStats.bestCombo, 5);
+  assert.equal('checkpointStats' in engine, false);
 });

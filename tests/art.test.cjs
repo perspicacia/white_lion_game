@@ -30,7 +30,7 @@ function makeContext() {
 
 global.Image = FakeImage;
 global.document = { createElement: () => ({}) };
-global.window = { WhiteLionCore: { GROUND: 396, PLAYER_X: 146, STAGES: [] } };
+global.window = { WhiteLionCore: require('../dist/js/core.js') };
 require('../dist/js/art.js');
 const { Renderer } = global.window.WhiteLionArt;
 
@@ -52,10 +52,11 @@ test('boss draws no text banners during warning, recovery or rage', () => {
     renderer.bear = { naturalWidth: 1000 };
     renderer.engine.mode = 'boss-fight';
     renderer.engine.boss = { active: true, opacity: 1, x: 704, attackTimer: 2, ...state };
+    renderer.engine.upcomingBossLanes = () => ['middle', 'high'];
     ctx.fillText = () => assert.fail('Boss text must stay removed');
     renderer.drawBoss();
     assert.equal(ctx.operations.filter(op => op[0] === 'drawImage').length, 1);
-    assert.equal(ctx.operations.some(op => op[0] === 'fillRect'), false);
+    assert.equal(ctx.operations.some(op => op[0] === 'fillRect'), state.attackTimer === 0.5);
   }
 });
 
@@ -88,6 +89,47 @@ test('all nine stage obstacles have distinct canvas drawings without enemy sprit
   assert.equal(shapes.size, 9);
 });
 
+test('cobra has a distinct pixel-art hood and changes silhouette when it rises', () => {
+  const draw = height => {
+    const { renderer, ctx } = makeRenderer();
+    renderer.engine.entityRect = () => ({ x: 100, y: 396 - height, w: 110, h: height });
+    renderer.drawEntity({ type: 'cobra', worldX: 100 });
+    return ctx.operations;
+  };
+  const low = draw(76);
+  const raised = draw(136);
+  assert.equal(raised.some(([type]) => type === 'drawImage'), false);
+  const colors = raised.filter(([type]) => type === 'fillRect' || type === 'fill').map(operation => operation[1]);
+  for (const color of ['#050605', '#533833', '#d7c7b2', '#f1c84b', '#fff1d6', '#cf3037']) assert.ok(colors.includes(color));
+  assert.notDeepEqual(low, raised);
+});
+
+test('cobra changes poses while keeping every sprite the same size and planted', () => {
+  const { renderer, ctx } = makeRenderer();
+  renderer.cobraCrouch = { complete: true, naturalWidth: 384 };
+  renderer.cobraRising = { complete: true, naturalWidth: 384 };
+  renderer.cobra = { complete: true, naturalWidth: 384 };
+  for (const [height, expected] of [
+    [76, renderer.cobraCrouch],
+    [106, renderer.cobraRising],
+    [136, renderer.cobra]
+  ]) {
+    ctx.operations.length = 0;
+    renderer.engine.entityRect = () => ({ x: 100, y: 396 - height, w: 110, h: height });
+    renderer.drawEntity({ type: 'cobra', worldX: 100 });
+    const draws = ctx.operations.filter(([type]) => type === 'drawImage');
+    assert.equal(draws.length, 1);
+    assert.equal(draws[0][1], expected);
+    assert.deepEqual(draws[0].slice(-4), [-75, -145, 150, 145]);
+    assert.ok(ctx.operations.some(([type, , y]) => type === 'translate' && y === 402));
+    assert.equal(ctx.operations.some(([type]) => type === 'scale'), false);
+  }
+  ctx.operations.length = 0;
+  renderer.engine.entityRect = () => ({ x: 100, y: 396 - 96, w: 110, h: 96 });
+  renderer.drawEntity({ type: 'cobra', worldX: 100 });
+  assert.equal(ctx.operations.filter(([type]) => type === 'drawImage').length, 2, 'pose transitions blend briefly');
+});
+
 test('coin collectible uses a stepped pixel outline, gold face, and dollar mark', () => {
   const { renderer, ctx } = makeRenderer();
   renderer.drawCollectible({ type: 'coin', worldX: 100 });
@@ -96,6 +138,16 @@ test('coin collectible uses a stepped pixel outline, gold face, and dollar mark'
   assert.ok(colors.includes('#ffc928'));
   assert.ok(colors.includes('#f29a00'));
   assert.equal(ctx.operations.some(([type]) => type === 'rotate'), false);
+});
+
+test('golden big coin keeps the coin design at a visibly larger scale', () => {
+  const { renderer, ctx } = makeRenderer();
+  renderer.engine.collectibleRect = () => ({ x: 100, y: 190, w: 40, h: 40 });
+  renderer.drawCollectible({ type: 'bigcoin', worldX: 100 });
+  assert.deepEqual(ctx.operations.find(([type]) => type === 'scale'), ['scale', 1.42, 1.42]);
+  const colors = ctx.operations.filter(([type]) => type === 'fillRect').map(([, color]) => color);
+  assert.ok(colors.includes('#fff5b5'));
+  assert.ok(colors.includes('#b95c00'));
 });
 
 test('food collectible uses a diagonal golden drumstick with a pale bone', () => {

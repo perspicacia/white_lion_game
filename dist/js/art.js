@@ -47,6 +47,9 @@
       this.backgrounds = backgrounds.map((name) => loadImage(name));
       this.lion = null;
       this.villains = null;
+      this.cobraCrouch = loadImage('cobra-enemy-crouch-2026-09-28-v01.png');
+      this.cobraRising = loadImage('cobra-enemy-rising-2026-09-28-v01.png');
+      this.cobra = loadImage('cobra-enemy-sprite-2026-09-22-v01.png');
       this.bear = loadImage('giant-bear-boss-spritesheet-2026-09-11-v01.png');
       loadImage('white-lion-run-spritesheet-2026-09-10-v01.png', (image) => { this.lion = keyedCanvas(image, 'gray'); });
       loadImage('villain-spritesheet-2026-09-10-v01.png', (image) => { this.villains = keyedCanvas(image, 'magenta'); });
@@ -87,28 +90,15 @@
       for (let x = -((engine.world * 0.55) % 56); x < 960; x += 56) ctx.fillRect(x, ground + 30, 34, 5);
     }
 
-    drawCheckpoint() {
-      const { ctx, engine } = this;
-      const cfg = root.WhiteLionCore.STAGES[engine.stage];
-      const next = (Math.floor(engine.world / 2500) + 1) * 2500;
-      const finish = engine.stage === 2 ? cfg.bossStart * 10 : cfg.length * 10;
-      if (next >= finish) return;
-      const x = root.WhiteLionCore.PLAYER_X + next - engine.world;
-      if (x < -30 || x > 990) return;
-      ctx.fillStyle = '#fff0bc';
-      ctx.fillRect(x, 300, 4, 96);
-      ctx.fillStyle = engine.element === 'fire' ? '#ff6b35' : '#42d8ff';
-      ctx.fillRect(x + 4, 304, 44, 24);
-    }
-
     drawCollectible(item) {
       const { ctx, engine } = this;
       const rect = engine.collectibleRect(item);
       if (rect.x < -50 || rect.x > 1010) return;
       ctx.save();
       const bob = Math.round(Math.sin(engine.time * 5 + item.worldX) * 2);
-      ctx.translate(Math.round(rect.x) + 14, Math.round(rect.y) + 14 + bob);
-      if (item.type === 'coin') {
+      ctx.translate(Math.round(rect.x) + rect.w / 2, Math.round(rect.y) + rect.h / 2 + bob);
+      if (item.type === 'coin' || item.type === 'bigcoin') {
+        if (item.type === 'bigcoin') ctx.scale(1.42, 1.42);
         ctx.fillStyle = '#3a200f';
         ctx.fillRect(-8, -14, 16, 2);
         ctx.fillRect(-12, -12, 24, 2);
@@ -138,6 +128,14 @@
         ctx.fillRect(-5, -1, 10, 3);
         ctx.fillRect(3, 1, 3, 6);
         ctx.fillRect(-4, 5, 9, 3);
+        if (item.type === 'bigcoin') {
+          ctx.fillStyle = '#fff5b5';
+          ctx.fillRect(-12, -3, 3, 7);
+          ctx.fillRect(9, -3, 3, 7);
+          ctx.fillStyle = '#b95c00';
+          ctx.fillRect(-3, -11, 7, 2);
+          ctx.fillRect(-3, 9, 7, 2);
+        }
       } else if (item.type === 'steak') {
         ctx.rotate(-0.12 + Math.sin(engine.time * 3 + item.worldX) * 0.025);
         ctx.scale(1.18, 1.18);
@@ -305,6 +303,119 @@
         for (let i = 0; i < 4; i += 1) {
           ctx.beginPath(); ctx.moveTo(rect.x + i * 17, root.WhiteLionCore.GROUND); ctx.lineTo(rect.x + 9 + i * 17, rect.y); ctx.lineTo(rect.x + 18 + i * 17, root.WhiteLionCore.GROUND); ctx.fill();
         }
+      } else if (entity.type === 'cobra') {
+        const raised = Math.max(0, Math.min(1, (h - 76) / 60));
+        const sway = Math.round(Math.sin(engine.time * 7 + entity.worldX) * (2 + raised * 3));
+        const center = x + 54 + sway;
+        if ([this.cobraCrouch, this.cobraRising, this.cobra].every(image => image && image.complete && image.naturalWidth)) {
+          const drawPose = (image, opacity) => {
+            ctx.globalAlpha = opacity;
+            // Every pose uses the same canvas size and planted base; only the anatomy changes.
+            ctx.drawImage(image, -75, -145, 150, 145);
+          };
+          ctx.save();
+          ctx.imageSmoothingEnabled = false;
+          ctx.translate(center, root.WhiteLionCore.GROUND + 6);
+          ctx.rotate(Math.sin(engine.time * 6 + entity.worldX) * 0.018 * raised);
+          if (raised < 0.28) drawPose(this.cobraCrouch, 1);
+          else if (raised < 0.4) {
+            const mix = (raised - 0.28) / 0.12;
+            drawPose(this.cobraCrouch, 1 - mix);
+            drawPose(this.cobraRising, mix);
+          } else if (raised < 0.62) drawPose(this.cobraRising, 1);
+          else if (raised < 0.74) {
+            const mix = (raised - 0.62) / 0.12;
+            drawPose(this.cobraRising, 1 - mix);
+            drawPose(this.cobra, mix);
+          } else drawPose(this.cobra, 1);
+          ctx.restore();
+          return;
+        }
+        const headY = Math.round(y + 3 + (1 - raised) * 23);
+        const hoodWidth = Math.round(72 + raised * 22);
+        const hoodHeight = Math.round(38 + raised * 16);
+        const hoodLeft = center - hoodWidth / 2;
+        const coilY = y + h - 29;
+
+        // A large, layered coil anchors the silhouette to the floor.
+        block('#070807', 1, h - 22, 106, 20);
+        block('#292c2a', 9, h - 28, 92, 23);
+        block('#555b54', 17, h - 24, 75, 7);
+        block('#0a0b0a', 34, h - 18, 53, 10);
+        block('#181b19', 42, h - 15, 38, 7);
+        block('#9b8d7d', 47, h - 11, 28, 4);
+        block('#070807', 0, h - 31, 13, 19);
+        block('#4f5650', 5, h - 36, 13, 12);
+
+        // Black outer neck and pale striped belly form a clear upright S shape.
+        const neckTop = headY + hoodHeight - 7;
+        ctx.fillStyle = '#070807';
+        ctx.beginPath();
+        ctx.moveTo(center - 25, coilY + 9);
+        ctx.lineTo(center - 18, neckTop);
+        ctx.lineTo(center + 19, neckTop);
+        ctx.lineTo(center + 28, coilY + 11);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#d7c7b2';
+        ctx.beginPath();
+        ctx.moveTo(center - 12, coilY + 4);
+        ctx.lineTo(center - 10, neckTop + 2);
+        ctx.lineTo(center + 10, neckTop + 2);
+        ctx.lineTo(center + 14, coilY + 4);
+        ctx.closePath();
+        ctx.fill();
+        for (let stripe = neckTop + 7; stripe < coilY; stripe += 10) {
+          ctx.fillStyle = '#705f55';
+          ctx.fillRect(center - 11, stripe, 23, 3);
+          ctx.fillStyle = '#f0e1ca';
+          ctx.fillRect(center - 8, stripe + 3, 18, 3);
+        }
+
+        // Broad hood copied from the reference silhouette: dark rim, brown inner panel, bright belly.
+        ctx.fillStyle = '#050605';
+        ctx.beginPath();
+        ctx.moveTo(center, headY);
+        ctx.lineTo(hoodLeft + 12, headY + 8);
+        ctx.lineTo(hoodLeft, headY + hoodHeight - 10);
+        ctx.lineTo(center - 18, headY + hoodHeight);
+        ctx.lineTo(center + 18, headY + hoodHeight);
+        ctx.lineTo(hoodLeft + hoodWidth, headY + hoodHeight - 10);
+        ctx.lineTo(hoodLeft + hoodWidth - 12, headY + 8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#533833';
+        ctx.beginPath();
+        ctx.moveTo(center, headY + 4);
+        ctx.lineTo(hoodLeft + 18, headY + 11);
+        ctx.lineTo(hoodLeft + 10, headY + hoodHeight - 12);
+        ctx.lineTo(center - 14, headY + hoodHeight - 3);
+        ctx.lineTo(center + 14, headY + hoodHeight - 3);
+        ctx.lineTo(hoodLeft + hoodWidth - 10, headY + hoodHeight - 12);
+        ctx.lineTo(hoodLeft + hoodWidth - 18, headY + 11);
+        ctx.closePath();
+        ctx.fill();
+        block('#9d735f', 19 + sway, headY - y + 10, 14, hoodHeight - 21);
+        block('#9d735f', 76 + sway, headY - y + 10, 14, hoodHeight - 21);
+
+        // Angular face, slanted golden eyes, nostrils, fangs and animated forked tongue.
+        block('#171513', 30 + sway, headY - y + 3, 49, 23);
+        block('#795448', 34 + sway, headY - y + 1, 42, 18);
+        block('#c69a75', 38 + sway, headY - y + 6, 34, 13);
+        block('#211b18', 38 + sway, headY - y + 13, 36, 10);
+        block('#f1c84b', 40 + sway, headY - y + 7, 10, 5);
+        block('#f1c84b', 62 + sway, headY - y + 7, 10, 5);
+        block('#15100e', 45 + sway, headY - y + 8, 3, 5);
+        block('#15100e', 64 + sway, headY - y + 8, 3, 5);
+        block('#090706', 50 + sway, headY - y + 16, 4, 3);
+        block('#090706', 59 + sway, headY - y + 16, 4, 3);
+        block('#fff1d6', 40 + sway, headY - y + 20, 5, 10);
+        block('#fff1d6', 68 + sway, headY - y + 20, 5, 10);
+        if (Math.floor(engine.time * 8) % 2 === 0) {
+          block('#cf3037', 54 + sway, headY - y + 22, 5, 15);
+          block('#cf3037', 48 + sway, headY - y + 34, 8, 3);
+          block('#cf3037', 58 + sway, headY - y + 34, 8, 3);
+        }
       } else if (this.villains) {
         const frame = Math.floor(engine.time * 9 + entity.worldX / 10) % 4;
         const sw = this.villains.width / 4;
@@ -370,12 +481,12 @@
       // Three ivory claw slashes point in the actual travel direction.
       for (let i = 0; i < 3; i += 1) {
         const y = 2 + i * 8;
-        ctx.fillStyle = '#a94845';
+        ctx.fillStyle = projectile.lane === 'high' ? '#7958c7' : '#a94845';
         ctx.beginPath(); ctx.moveTo(0, y + 5); ctx.lineTo(20, y);
         ctx.lineTo(projectile.w, y + 1); ctx.lineTo(30, y + 6); ctx.closePath(); ctx.fill();
         ctx.fillStyle = '#fff3d5'; ctx.fillRect(22, y + 1, 25, 2);
         const trail = (projectile.life * 40 + i * 5) % 14;
-        ctx.fillStyle = '#ffae91'; ctx.fillRect(-trail - 5, y + 2, 5, 2);
+        ctx.fillStyle = projectile.lane === 'high' ? '#c7c2ff' : '#ffae91'; ctx.fillRect(-trail - 5, y + 2, 5, 2);
       }
       ctx.restore();
     }
@@ -395,6 +506,16 @@
       ctx.drawImage(this.bear, frame * sw + 8, 150, sw - 16, 370, engine.boss.x - 92, root.WhiteLionCore.GROUND - 249, 350, 246);
       ctx.shadowBlur = 0;
       ctx.restore();
+      // Preview the actual firing heights without restoring any boss text banners.
+      if (warning) {
+        ctx.save();
+        ctx.globalAlpha = engine.reducedMotion ? 0.6 : 0.45 + Math.sin(engine.time * 8) * 0.15;
+        for (const lane of engine.upcomingBossLanes()) {
+          this.drawBossWave({ x: engine.boss.x - 58, y: root.WhiteLionCore.BOSS_LANES[lane] - 12,
+            w: 58, h: 24, vx: -1, vy: 0, lane, groundWave: lane === 'low', life: 2.2 });
+        }
+        ctx.restore();
+      }
     }
 
     drawLion() {
@@ -432,7 +553,6 @@
       ctx.clearRect(0, 0, 960, 480);
       ctx.imageSmoothingEnabled = false;
       this.drawBackground();
-      this.drawCheckpoint();
       for (const item of engine.collectibles) if (!item.collected) this.drawCollectible(item);
       for (const entity of engine.entities) if (!entity.removed) this.drawEntity(entity);
       for (const projectile of engine.enemyProjectiles) this.drawBossWave(projectile);

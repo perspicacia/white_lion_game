@@ -69,25 +69,25 @@
         this.announce('세 개의 스테이지를 모두 완주했습니다.');
       } else if (type === 'combo-up') {
         this.announce(`연속 성공! 아이템과 악당 점수가 ${detail.multiplier}배가 되었습니다.`);
-      } else if (type === 'checkpoint') {
-        this.showToast(`체크포인트 ${snapshot.checkpoint} m 저장`);
-        this.announce(`${snapshot.checkpoint} 미터 체크포인트를 저장했습니다.`);
       } else if (type === 'hit') {
         this.showToast(`피격! 체력 ${snapshot.hp}칸`);
         this.announce(`피격. 체력이 ${snapshot.hp}칸 남았습니다.`);
       } else if (type === 'respawn') {
-        this.showToast(`체크포인트 ${snapshot.checkpoint} m에서 다시 출발`);
-        this.announce('체력이 모두 소진되어 최근 체크포인트에서 다시 출발합니다.');
+        this.showToast(`${snapshot.stageName} 처음부터 다시 출발`);
+        this.announce('체력이 모두 소진되어 현재 스테이지 처음부터 다시 출발합니다.');
       } else if (type === 'coin') {
         this.showToast(`코인 +${detail.points}`);
+      } else if (type === 'bigcoin') {
+        this.showToast(`황금 왕코인 +${detail.points}`);
+        this.announce(`황금 왕코인 획득. ${detail.points}점`);
       } else if (type === 'food') {
         this.showToast(`치킨 +${detail.points} · 체력 회복`);
       } else if (type === 'steak') {
         this.showToast(`스테이크 +${detail.points} · 체력 회복`);
       } else if (type === 'boss-start') {
         this.bossHud.hidden = false;
-        this.showToast('거대 곰 출현! 충격파를 점프로 피하세요');
-        this.announce('최종 보스 거대 곰이 나타났습니다. 충격파는 점프로 피하고 공격하세요.');
+        this.showToast('거대 곰 출현! 공격 높이를 살펴보세요');
+        this.announce('최종 보스 거대 곰이 나타났습니다. 상단, 중앙, 하단 공격을 피하세요.');
       } else if (type === 'boss-defeated') {
         this.showToast('거대 곰이 서서히 사라집니다');
         this.announce('거대 곰을 물리쳤습니다.');
@@ -117,7 +117,6 @@
       health.setAttribute('aria-label', `체력 ${snapshot.hp} / ${snapshot.maxHp}`);
       const progress = Math.max(0, Math.min(100, snapshot.distance / snapshot.length * 100));
       document.querySelector('#progress-fill').style.width = `${progress}%`;
-      document.querySelector('#checkpoint-marker').style.left = `${Math.max(0, Math.min(100, snapshot.checkpoint / snapshot.length * 100))}%`;
       const active = ['running', 'boss-fight'].includes(snapshot.mode);
       document.querySelector('#pause-button').disabled = !active;
       document.querySelector('#end-button').disabled = !active && snapshot.mode !== 'paused';

@@ -203,6 +203,9 @@
           this.tone(880, 0.08, { type: 'square', gain: 0.06 });
           this.tone(1320, 0.12, { type: 'square', gain: 0.05, delay: 0.06 });
           break;
+        case 'bigcoin':
+          [659, 988, 1318].forEach((frequency, index) => this.tone(frequency, 0.2, { type: 'square', gain: 0.065, delay: index * 0.055 }));
+          break;
         case 'food':
           this.tone(392, 0.1, { type: 'triangle', gain: 0.065 });
           this.tone(523, 0.12, { type: 'triangle', gain: 0.06, delay: 0.07 });
@@ -233,9 +236,6 @@
         case 'hit':
           this.tone(150, 0.28, { to: 58, type: 'square', gain: 0.095 });
           this.noise(0.13, { filter: 'lowpass', frequency: 700, gain: 0.075 });
-          break;
-        case 'checkpoint':
-          [523, 659, 784].forEach((frequency, index) => this.tone(frequency, 0.18, { type: 'triangle', gain: 0.055, delay: index * 0.08 }));
           break;
         case 'boss-start':
           [110, 98, 82].forEach((frequency, index) => this.tone(frequency, 0.42, { type: 'sawtooth', gain: 0.07, delay: index * 0.16 }));

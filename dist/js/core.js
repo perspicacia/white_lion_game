@@ -7,10 +7,13 @@
   const PLAYER_H = 54;
   const MAX_HP = 5;
   const BOSS_MAX_HP = 26;
-  const CHECKPOINT_METERS = 500;
   const JUMP_VELOCITY = -720;
   const GRAVITY = 1800;
   const ITEM_Y = 214;
+  const COIN_ARC_INTERVAL = 0.95;
+  const BOSS_LANES = { low: GROUND - 12, middle: GROUND - 112, high: GROUND - 212 };
+  const BOSS_PATTERNS = [['middle'], ['low'], ['high'], ['low', 'high']];
+  const BOSS_RAGE_PATTERNS = [['low', 'middle'], ['middle', 'high'], ['low', 'high']];
 
   const STAGES = [
     { id: 1, name: '황금빛 사막', length: 1685, speed: 295, background: 'desert' },
@@ -32,7 +35,8 @@
     ledge: { w: 72, h: 30 },
     spikes: { w: 68, h: 26 },
     hyena: { w: 92, h: 72 },
-    ghost: { w: 68, h: 66 }
+    ghost: { w: 68, h: 66 },
+    cobra: { w: 110, h: 76 }
   };
 
   function clamp(value, min, max) {
@@ -46,11 +50,11 @@
   function stagePatterns(stageIndex) {
     if (stageIndex === 0) return ['sandstone', 'hyena', 'dune', 'cactus', 'hyena', 'sandstone'];
     if (stageIndex === 1) return ['altar', 'ghost', 'pillar', 'hyena', 'spears', 'ghost', 'altar'];
-    return ['hyena', 'thorns', 'ghost', 'log', 'roots', 'ghost', 'hyena', 'thorns'];
+    return ['hyena', 'thorns', 'ghost', 'log', 'cobra', 'roots', 'ghost', 'hyena', 'cobra', 'thorns'];
   }
 
   function isEnemy(type) {
-    return type === 'hyena' || type === 'ghost';
+    return type === 'hyena' || type === 'ghost' || type === 'cobra';
   }
 
   function isHealingFood(type) {
@@ -79,11 +83,9 @@
 
     setupStage() {
       this.world = 0;
-      this.checkpoint = 0;
-      this.checkpointScore = this.score;
+      this.stageStartScore = this.score;
       this.combo = 0;
       this.runStats = { bestCombo: 0, bonus: 0, pickups: 0, enemies: 0 };
-      this.checkpointStats = { ...this.runStats };
       this.playerY = GROUND;
       this.vy = 0;
       this.jumpsUsed = 0;
@@ -131,30 +133,33 @@
       const cfg = STAGES[this.stage];
       const stopMeters = this.stage === 2 ? cfg.bossStart - 35 : cfg.length - 25;
       const items = [];
-      for (let i = 0, meters = 85; meters < stopMeters; i += 1, meters += 92 - this.stage * 4) {
-        const foodSlot = i % 4 === 3;
-        const type = foodSlot ? (Math.floor(i / 4) % 2 === 0 ? 'food' : 'steak') : 'coin';
-        if (isHealingFood(type)) {
-          items.push({ id: `c-${this.stage}-${i}`, type, worldX: meters * 10, y: ITEM_Y, w: 28, h: 28, collected: false });
-          continue;
+      for (let group = 0, start = 480; start < stopMeters * 10; group += 1) {
+        const arcs = group % 3 === 2 ? 3 : 2;
+        const foodSlot = group % 5 === 4;
+        const straightLine = group % 2 === 1;
+        const bigCoinSlot = group % 6 === 5;
+        // Alternate jump-shaped arches with horizontal ribbons. Both remain airborne.
+        for (let arc = 0; arc < arcs; arc += 1) {
+          for (let coin = 0; coin < 7; coin += 1) {
+            const t = 0.1 + coin * 0.1;
+            const food = foodSlot && arc === arcs - 1 && coin === 3;
+            const bigCoin = !food && bigCoinSlot && arc === arcs - 1 && coin === 3;
+            const type = food ? (Math.floor(group / 5) % 2 === 0 ? 'food' : 'steak') : bigCoin ? 'bigcoin' : 'coin';
+            const size = bigCoin ? 40 : 28;
+            const worldX = start + cfg.speed * (arc * COIN_ARC_INTERVAL + t) + PLAYER_W / 2 - size / 2;
+            if (worldX + size >= stopMeters * 10) continue;
+            const pathY = straightLine ? ITEM_Y + 34 : Math.max(ITEM_Y, GROUND + JUMP_VELOCITY * t + GRAVITY * t * t / 2 - 43);
+            items.push({
+              id: `c-${this.stage}-${group}-${arc * 7 + coin}`,
+              type,
+              pattern: straightLine ? 'line' : 'arc',
+              worldX,
+              y: pathY - (size - 28) / 2,
+              w: size, h: size, collected: false
+            });
+          }
         }
-
-        const coinArc = [
-          { x: -34, y: 10 },
-          { x: 0, y: 0 },
-          { x: 34, y: 10 },
-        ];
-        coinArc.forEach((offset, coinIndex) => {
-          items.push({
-            id: `c-${this.stage}-${i}-${coinIndex}`,
-            type,
-            worldX: meters * 10 + offset.x,
-            y: ITEM_Y + offset.y,
-            w: 28,
-            h: 28,
-            collected: false,
-          });
-        });
+        start += cfg.speed * (arcs * COIN_ARC_INTERVAL + 0.3);
       }
       return items;
     }
@@ -232,11 +237,16 @@
 
     entityRect(entity) {
       const float = entity.type === 'ghost' ? 76 + Math.sin(this.time * 3.6 + entity.worldX) * 18 : 0;
+      const screenX = PLAYER_X + entity.worldX - this.world;
+      // The snake stays raised after it notices the lion; it does not shrink again on contact.
+      const cobraRiseRaw = entity.type === 'cobra' ? clamp((650 - screenX) / 270, 0, 1) : 0;
+      const cobraRise = cobraRiseRaw * cobraRiseRaw * (3 - 2 * cobraRiseRaw);
+      const height = entity.h + Math.round(cobraRise * 60);
       return {
-        x: PLAYER_X + entity.worldX - this.world,
-        y: GROUND - entity.h - float,
+        x: screenX,
+        y: GROUND - height - float,
         w: entity.w,
-        h: entity.h
+        h: height
       };
     }
 
@@ -262,7 +272,6 @@
         maxHp: MAX_HP,
         distance: Math.floor(this.world / 10),
         length: cfg.length,
-        checkpoint: Math.floor(this.checkpoint / 10),
         score: this.score,
         combo: this.combo,
         multiplier: this.comboMultiplier(),
@@ -321,34 +330,12 @@
     }
 
     respawn() {
-      const cfg = STAGES[this.stage];
-      this.world = this.checkpoint;
-      this.score = this.checkpointScore;
-      this.combo = 0;
-      this.runStats = { ...this.checkpointStats };
+      // Discard this failed stage's rewards so retries cannot farm the same ribbon.
+      this.score = this.stageStartScore;
+      this.setupStage();
       this.hp = MAX_HP;
-      this.playerY = GROUND;
-      this.vy = 0;
-      this.jumpsUsed = 0;
       this.invulnerable = 2;
-      this.attackCooldown = 0;
-      this.projectiles = [];
-      this.enemyProjectiles = [];
-      this.entities = this.makeEntities();
-      this.collectibles = this.makeCollectibles();
-      for (const entity of this.entities) if (entity.worldX < this.world + 180) entity.removed = true;
-      for (const item of this.collectibles) if (item.worldX < this.world + 80) item.collected = true;
-      this.boss.hp = this.boss.maxHp;
-      this.boss.x = 704;
-      this.boss.movementTime = 0;
-      this.boss.attackTimer = 1.4;
-      this.boss.recovery = 0;
-      this.boss.attackCount = 0;
-      this.boss.enraged = false;
-      this.boss.opacity = 1;
-      this.boss.fadeTimer = 0;
-      this.boss.active = this.stage === 2 && this.world >= cfg.bossStart * 10;
-      this.mode = this.boss.active ? 'boss-fight' : 'running';
+      this.mode = 'running';
       this.emit('respawn');
     }
 
@@ -398,11 +385,11 @@
         if (overlaps(player, rect)) {
           item.collected = true;
           const healingFood = isHealingFood(item.type);
-          const points = this.reward(healingFood ? 120 : 50, 'pickups');
+          const points = this.reward(healingFood ? 120 : item.type === 'bigcoin' ? 250 : 50, 'pickups');
           if (healingFood) this.hp = Math.min(MAX_HP, this.hp + 1);
           const burstColor = item.type === 'steak' ? '#e85b43' : healingFood ? '#ff7f66' : '#ffd44d';
-          this.burst(rect.x + 14, rect.y + 14, burstColor, 8);
-          this.emit(healingFood ? item.type : 'coin', { points });
+          this.burst(rect.x + rect.w / 2, rect.y + rect.h / 2, burstColor, item.type === 'bigcoin' ? 14 : 8);
+          this.emit(healingFood ? item.type : item.type === 'bigcoin' ? 'bigcoin' : 'coin', { points });
         }
       }
 
@@ -415,7 +402,8 @@
             if (projectile.life <= 0 || !overlaps(projectile, rect)) continue;
             projectile.life = 0;
             entity.removed = true;
-            const points = this.reward(entity.type === 'ghost' ? 180 : 140, 'enemies');
+            const enemyPoints = { hyena: 140, ghost: 180, cobra: 220 };
+            const points = this.reward(enemyPoints[entity.type], 'enemies');
             this.burst(rect.x + rect.w / 2, rect.y + rect.h / 2, this.element === 'fire' ? '#ff7b32' : '#7de7ff', 14);
             this.emit('enemy-defeated', { enemy: entity.type, element: this.element, points });
             break;
@@ -432,9 +420,6 @@
     beginBoss() {
       const cfg = STAGES[this.stage];
       this.world = cfg.bossStart * 10;
-      this.checkpoint = this.world;
-      this.checkpointScore = this.score;
-      this.checkpointStats = { ...this.runStats };
       this.combo = 0;
       this.boss.active = true;
       this.boss.recovery = 0;
@@ -447,6 +432,11 @@
       this.emit('boss-start');
     }
 
+    upcomingBossLanes() {
+      const patterns = this.boss.hp <= this.boss.maxHp / 2 ? BOSS_RAGE_PATTERNS : BOSS_PATTERNS;
+      return patterns[this.boss.attackCount % patterns.length];
+    }
+
     updateBoss(dt) {
       // Ease forward and back while keeping the visible bear safely away from the cub.
       this.boss.movementTime += dt;
@@ -457,35 +447,21 @@
       this.boss.recovery = Math.max(0, this.boss.recovery - dt);
       this.boss.attackTimer -= dt;
       if (this.boss.attackTimer <= 0) {
-        this.boss.attackTimer = this.boss.enraged ? 2.15 : 2.7;
-        this.boss.recovery = 0.95;
-        const groundWave = this.boss.enraged && this.boss.attackCount % 2 === 1;
+        this.boss.attackTimer = this.boss.enraged ? 1.9 : 2.35;
+        this.boss.recovery = 0.85;
+        const lanes = this.upcomingBossLanes();
         this.boss.attackCount += 1;
         const w = 58;
         const h = 24;
         const x = bossRect.x + 10;
-        const y = groundWave ? GROUND - h : bossRect.y + 56;
-        const player = this.playerRect();
-        const fromX = x + w / 2;
-        const fromY = y + h / 2;
-        const targetX = player.x + player.w / 2;
-        const targetY = player.y + player.h / 2;
-        const dx = targetX - fromX;
-        const dy = targetY - fromY;
-        const distance = Math.hypot(dx, dy) || 1;
         const speed = this.boss.enraged ? 490 : 430;
-        this.enemyProjectiles.push({
-          x,
-          y,
-          w,
-          h,
-          vx: groundWave ? -speed : dx / distance * speed,
-          vy: groundWave ? 0 : dy / distance * speed,
-          groundWave,
-          life: 2.2,
-          hit: false
-        });
-        this.emit('boss-attack');
+        for (const lane of lanes) {
+          this.enemyProjectiles.push({
+            x, y: BOSS_LANES[lane] - h / 2, w, h,
+            vx: -speed, vy: 0, lane, groundWave: lane === 'low', life: 2.2, hit: false
+          });
+        }
+        this.emit('boss-attack', { lanes: [...lanes] });
       }
       for (const projectile of this.projectiles) {
         if (projectile.life <= 0 || !overlaps(projectile, bossRect)) continue;
@@ -548,15 +524,6 @@
         this.updateWorldCollisions();
         if (this.mode === 'dying') return;
 
-        const checkpoint = Math.floor(this.world / (CHECKPOINT_METERS * 10)) * CHECKPOINT_METERS * 10;
-        const finish = this.stage === 2 ? cfg.bossStart * 10 : cfg.length * 10;
-        if (checkpoint > this.checkpoint && checkpoint < finish) {
-          this.checkpoint = checkpoint;
-          this.checkpointScore = this.score;
-          this.checkpointStats = { ...this.runStats };
-          this.emit('checkpoint');
-        }
-
         if (this.stage === 2 && this.world >= cfg.bossStart * 10) {
           this.beginBoss();
         } else if (this.stage < 2 && this.world >= cfg.length * 10) {
@@ -580,7 +547,8 @@
     PLAYER_H,
     MAX_HP,
     BOSS_MAX_HP,
-    CHECKPOINT_METERS,
+    BOSS_LANES,
+    COIN_ARC_INTERVAL,
     JUMP_VELOCITY,
     GRAVITY,
     ITEM_Y,
