@@ -49,6 +49,8 @@
       this.villains = null;
       this.cobraCrouch = loadImage('cobra-enemy-crouch-2026-09-28-v01.png');
       this.cobraRising = loadImage('cobra-enemy-rising-2026-09-28-v01.png');
+      this.cobraThreeQuarter = loadImage('cobra-enemy-three-quarter-2026-09-28-v01.png');
+      this.cobraNearlyUpright = loadImage('cobra-enemy-nearly-upright-2026-09-28-v01.png');
       this.cobra = loadImage('cobra-enemy-sprite-2026-09-22-v01.png');
       this.bear = loadImage('giant-bear-boss-spritesheet-2026-09-11-v01.png');
       loadImage('white-lion-run-spritesheet-2026-09-10-v01.png', (image) => { this.lion = keyedCanvas(image, 'gray'); });
@@ -305,9 +307,10 @@
         }
       } else if (entity.type === 'cobra') {
         const raised = Math.max(0, Math.min(1, (h - 76) / 60));
-        const sway = Math.round(Math.sin(engine.time * 7 + entity.worldX) * (2 + raised * 3));
+        const sway = Math.sin(engine.time * 2.8 + entity.worldX * 0.01) * (1 + raised * 1.5);
         const center = x + 54 + sway;
-        if ([this.cobraCrouch, this.cobraRising, this.cobra].every(image => image && image.complete && image.naturalWidth)) {
+        const cobraPoses = [this.cobraCrouch, this.cobraRising, this.cobraThreeQuarter, this.cobraNearlyUpright, this.cobra];
+        if (cobraPoses.every(image => image && image.complete && image.naturalWidth)) {
           const drawPose = (image, opacity) => {
             ctx.globalAlpha = opacity;
             // Every pose uses the same canvas size and planted base; only the anatomy changes.
@@ -316,18 +319,14 @@
           ctx.save();
           ctx.imageSmoothingEnabled = false;
           ctx.translate(center, root.WhiteLionCore.GROUND + 6);
-          ctx.rotate(Math.sin(engine.time * 6 + entity.worldX) * 0.018 * raised);
-          if (raised < 0.28) drawPose(this.cobraCrouch, 1);
-          else if (raised < 0.4) {
-            const mix = (raised - 0.28) / 0.12;
-            drawPose(this.cobraCrouch, 1 - mix);
-            drawPose(this.cobraRising, mix);
-          } else if (raised < 0.62) drawPose(this.cobraRising, 1);
-          else if (raised < 0.74) {
-            const mix = (raised - 0.62) / 0.12;
-            drawPose(this.cobraRising, 1 - mix);
-            drawPose(this.cobra, mix);
-          } else drawPose(this.cobra, 1);
+          ctx.rotate(Math.sin(engine.time * 2.3 + entity.worldX * 0.01) * 0.012 * raised);
+          // More intermediate silhouettes keep the head from jumping between poses.
+          const poseStops = [0, 0.2, 0.45, 0.85, 1];
+          let nextPose = 1;
+          while (nextPose < poseStops.length - 1 && raised > poseStops[nextPose]) nextPose += 1;
+          const mix = Math.max(0, Math.min(1, (raised - poseStops[nextPose - 1]) / (poseStops[nextPose] - poseStops[nextPose - 1])));
+          if (mix < 1) drawPose(cobraPoses[nextPose - 1], 1 - mix);
+          if (mix > 0) drawPose(cobraPoses[nextPose], mix);
           ctx.restore();
           return;
         }

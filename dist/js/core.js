@@ -239,9 +239,10 @@
       const float = entity.type === 'ghost' ? 76 + Math.sin(this.time * 3.6 + entity.worldX) * 18 : 0;
       const screenX = PLAYER_X + entity.worldX - this.world;
       // The snake stays raised after it notices the lion; it does not shrink again on contact.
-      const cobraRiseRaw = entity.type === 'cobra' ? clamp((650 - screenX) / 270, 0, 1) : 0;
-      const cobraRise = cobraRiseRaw * cobraRiseRaw * (3 - 2 * cobraRiseRaw);
-      const height = entity.h + Math.round(cobraRise * 60);
+      // Let the whole posture unfold over the approach instead of popping upright near contact.
+      const cobraRiseRaw = entity.type === 'cobra' ? clamp((860 - screenX) / 560, 0, 1) : 0;
+      const cobraRise = cobraRiseRaw ** 3 * (cobraRiseRaw * (cobraRiseRaw * 6 - 15) + 10);
+      const height = entity.h + cobraRise * 60;
       return {
         x: screenX,
         y: GROUND - height - float,

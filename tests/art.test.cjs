@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
 class FakeImage {
   constructor() {
@@ -10,8 +12,11 @@ class FakeImage {
 
 function makeContext() {
   const operations = [];
+  const alphaSamples = [];
   return {
     operations,
+    alphaSamples,
+    globalAlpha: 1,
     fillStyle: '',
     save() {},
     restore() {},
@@ -24,7 +29,7 @@ function makeContext() {
     closePath() { operations.push(['closePath']); },
     fill() { operations.push(['fill', this.fillStyle]); },
     fillRect(x, y, width, height) { operations.push(['fillRect', this.fillStyle, x, y, width, height]); },
-    drawImage(...args) { operations.push(['drawImage', ...args]); },
+    drawImage(...args) { operations.push(['drawImage', ...args]); alphaSamples.push(this.globalAlpha); },
   };
 }
 
@@ -108,10 +113,14 @@ test('cobra changes poses while keeping every sprite the same size and planted',
   const { renderer, ctx } = makeRenderer();
   renderer.cobraCrouch = { complete: true, naturalWidth: 384 };
   renderer.cobraRising = { complete: true, naturalWidth: 384 };
+  renderer.cobraThreeQuarter = { complete: true, naturalWidth: 1254 };
+  renderer.cobraNearlyUpright = { complete: true, naturalWidth: 1254 };
   renderer.cobra = { complete: true, naturalWidth: 384 };
   for (const [height, expected] of [
     [76, renderer.cobraCrouch],
-    [106, renderer.cobraRising],
+    [88, renderer.cobraRising],
+    [103, renderer.cobraThreeQuarter],
+    [127, renderer.cobraNearlyUpright],
     [136, renderer.cobra]
   ]) {
     ctx.operations.length = 0;
@@ -124,10 +133,27 @@ test('cobra changes poses while keeping every sprite the same size and planted',
     assert.ok(ctx.operations.some(([type, , y]) => type === 'translate' && y === 402));
     assert.equal(ctx.operations.some(([type]) => type === 'scale'), false);
   }
-  ctx.operations.length = 0;
-  renderer.engine.entityRect = () => ({ x: 100, y: 396 - 96, w: 110, h: 96 });
-  renderer.drawEntity({ type: 'cobra', worldX: 100 });
-  assert.equal(ctx.operations.filter(([type]) => type === 'drawImage').length, 2, 'pose transitions blend briefly');
+  for (const height of [82, 96, 116, 131]) {
+    ctx.operations.length = 0;
+    ctx.alphaSamples.length = 0;
+    renderer.engine.entityRect = () => ({ x: 100, y: 396 - height, w: 110, h: height });
+    renderer.drawEntity({ type: 'cobra', worldX: 100 });
+    assert.equal(ctx.operations.filter(([type]) => type === 'drawImage').length, 2, 'poses blend throughout the rise');
+    assert.ok(ctx.alphaSamples.every(alpha => alpha > 0 && alpha < 1));
+    assert.ok(Math.abs(ctx.alphaSamples[0] + ctx.alphaSamples[1] - 1) < 1e-8);
+  }
+});
+
+test('all five cobra animation frames are bundled', () => {
+  for (const name of [
+    'cobra-enemy-crouch-2026-09-28-v01.png',
+    'cobra-enemy-rising-2026-09-28-v01.png',
+    'cobra-enemy-three-quarter-2026-09-28-v01.png',
+    'cobra-enemy-nearly-upright-2026-09-28-v01.png',
+    'cobra-enemy-sprite-2026-09-22-v01.png'
+  ]) {
+    assert.ok(fs.statSync(path.join(__dirname, '..', 'dist', 'assets', name)).size > 10000, name);
+  }
 });
 
 test('coin collectible uses a stepped pixel outline, gold face, and dollar mark', () => {

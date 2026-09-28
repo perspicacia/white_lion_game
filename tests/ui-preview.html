@@ -16,6 +16,8 @@ iframe { display:block; width:100%; height:calc(100dvh - 90px); border:0; }
 <button data-case="boss">보스 표시</button>
 <button data-case="cobra-crouch">코브라 웅크림</button>
 <button data-case="cobra-rising">코브라 일어남</button>
+<button data-case="cobra-three-quarter">코브라 많이 일어남</button>
+<button data-case="cobra-nearly-upright">코브라 거의 기립</button>
 <button data-case="cobra">코브라 기립</button>
 <button data-case="ribbon">곡선·일자·왕코인</button>
 <button data-case="lanes">상중하 공격</button>
@@ -34,7 +36,8 @@ document.querySelector('nav').addEventListener('click', event => {
     engine.collectibles = [];
     const cobra = engine.entities.find(entity => entity.type === 'cobra');
     engine.entities = [cobra];
-    engine.world = cobra.worldX - (kind === 'cobra-crouch' ? 564 : kind === 'cobra-rising' ? 369 : 235);
+    const offsets = { 'cobra-crouch': 784, 'cobra-rising': 554, 'cobra-three-quarter': 434, 'cobra-nearly-upright': 304, cobra: 134 };
+    engine.world = cobra.worldX - offsets[kind];
     engine.pause();
     win.document.querySelector('#pause-overlay').hidden = true;
     return;
